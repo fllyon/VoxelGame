@@ -26,11 +26,13 @@ public class World : MonoBehaviour {
 
     public static Dictionary<int, Chunk> chunks = new Dictionary<int, Chunk>();
     public static Material material;
+    public static Data data;
 
 
     void Start() {
 
         material = Resources.Load<Material>("BlockTextures");
+        data = new Data();
 
         for (int y = 0; y < WORLD_HEIGHT_IN_CHUNKS; ++y) {
             for (int x = 0; x < WORLD_WIDTH_IN_CHUNKS; ++x) {

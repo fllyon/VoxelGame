@@ -1,0 +1,43 @@
+{
+    "blockTypes": [
+        {
+            "id": 0,
+            "name": "bedrock",
+
+            "top": 1,
+            "front": 1,
+            "left": 1,
+            "back": 1,
+            "right": 1,
+            "bottom": 1,
+
+            "isTransparent": false
+        },
+        {
+            "id": 1,
+            "name": "test1",
+
+            "top": 1,
+            "front": 1,
+            "left": 1,
+            "back": 1,
+            "right": 1,
+            "bottom": 1,
+
+            "isTransparent": false
+        },
+        {
+            "id": 2,
+            "name": "test2",
+
+            "top": 1,
+            "front": 1,
+            "left": 1,
+            "back": 1,
+            "right": 1,
+            "bottom": 1,
+
+            "isTransparent": false
+        }
+    ]
+}
