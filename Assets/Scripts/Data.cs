@@ -11,7 +11,9 @@ public class Data {
     public static List<BlockType> blockTypes = new List<BlockType>();
 
 
-    public Data() { InitializeBlockTypes(); }
+    public Data() {
+        InitializeBlockTypes();
+    }
 
     private void InitializeBlockTypes() {
         string jsonData = Resources.Load<TextAsset>("BlockData").text;

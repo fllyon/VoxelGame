@@ -2,41 +2,23 @@
     "blockTypes": [
         {
             "id": 0,
-            "name": "bedrock",
+            "name": "Air",
 
-            "top": 1,
-            "front": 1,
-            "left": 1,
-            "back": 1,
-            "right": 1,
-            "bottom": 1,
-
+            "faces": [0, 0, 0, 0, 0, 0],
+            "isTransparent": true
+        },
+        {
+            "id": 1,
+            "name": "Bedrock",
+            
+            "faces": [0, 0, 0, 0, 0, 0],
             "isTransparent": false
         },
         {
             "id": 1,
-            "name": "test1",
-
-            "top": 1,
-            "front": 1,
-            "left": 1,
-            "back": 1,
-            "right": 1,
-            "bottom": 1,
-
-            "isTransparent": false
-        },
-        {
-            "id": 2,
-            "name": "test2",
-
-            "top": 1,
-            "front": 1,
-            "left": 1,
-            "back": 1,
-            "right": 1,
-            "bottom": 1,
-
+            "name": "Grass",
+            
+            "faces": [1, 2, 2, 2, 2, 3],
             "isTransparent": false
         }
     ]

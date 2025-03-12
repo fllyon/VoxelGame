@@ -24,7 +24,7 @@ public class Chunk : MonoBehaviour {
 
                 float ground_height = 120;
                 for (int y = 0; y < CHUNK_SIZE; ++y) {
-                    if (y + chunk_coord.y < ground_height) { chunk_data[x, y, z] = 1; }
+                    if (y + chunk_coord.y < ground_height) { chunk_data[x, y, z] = 2; }
                     else { chunk_data[x, y, z] = 0; }
                 }
 
@@ -45,6 +45,7 @@ public class Chunk : MonoBehaviour {
                 for (int y = 0; y < CHUNK_SIZE; ++y) {
 
                     if (chunk_data[x, y, z] == 0) { continue; }
+                    BlockType blockType = Data.blockTypes[chunk_data[x, y, z]];
 
                     Vector3 block_position = new Vector3(x, y, z);
                     for (int face = 0; face < 6; ++face) {
@@ -53,12 +54,22 @@ public class Chunk : MonoBehaviour {
                         int nbr_y = y + VoxelData.directions[face].y;
                         int nbr_z = z + VoxelData.directions[face].z;
                         Vector3Int nbr = new Vector3Int(nbr_x, nbr_y, nbr_z);
-                        if (GetLocalBlockType(nbr) == 1) { continue; }
+                        if (!GetLocalBlockType(nbr).isTransparent) { continue; }
 
                         for (int tri_idx = 0; tri_idx < 6; ++tri_idx) {
+                            int textureID = blockType.faces[tri_idx];
+
                             int vrtx_idx = VoxelData.Triangles[face, tri_idx];
                             vertices.Add(block_position + VoxelData.Vertices[vrtx_idx]);
-                            uvs.Add(VoxelData.UVs[tri_idx]);
+
+                            float yUV = textureID / VoxelData.TEXTURE_ATLAS_SIZE;
+                            float xUV = textureID - (yUV * VoxelData.TEXTURE_ATLAS_SIZE);
+                            yUV *= VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE;
+                            yUV = 1f - yUV - VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE;
+                            xUV *= VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE;
+                            uvs.Add(new Vector2(xUV, yUV) + VoxelData.UVs[tri_idx] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE); 
+                            if (chunk_coord == Vector3Int.zero) Debug.Log(new Vector2(xUV, yUV) + VoxelData.UVs[tri_idx] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE);
+
                             triangles.Add(vertex_count);
                             ++vertex_count;
                         }
@@ -88,9 +99,9 @@ public class Chunk : MonoBehaviour {
         return (chunk_coord * CHUNK_SIZE) + position;
     }
 
-    public int GetLocalBlockType(Vector3Int position) {
-        if (LocalPositionIsInChunk(position)) return chunk_data[position.x, position.y, position.z];
-        return 0;
+    public BlockType GetLocalBlockType(Vector3Int position) {
+        if (LocalPositionIsInChunk(position)) return Data.blockTypes[chunk_data[position.x, position.y, position.z]];
+        return Data.blockTypes[0];
 
         // return World.GetGlobalBlockType(GetGlobalPosition(position));
     }

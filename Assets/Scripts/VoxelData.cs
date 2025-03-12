@@ -1,6 +1,9 @@
 using UnityEngine;
 
 public static class VoxelData {
+
+    public static int TEXTURE_ATLAS_SIZE = 16;
+    public static float NORMALISED_TEXTURE_ATLAS_SIZE { get { return 1f / TEXTURE_ATLAS_SIZE; } }
     
     public static readonly Vector3Int[] Vertices = new Vector3Int[8] {
         new Vector3Int(0, 1, 0), new Vector3Int(0, 1, 1), new Vector3Int(1, 1, 1), new Vector3Int(1, 1, 0), 
@@ -8,7 +11,7 @@ public static class VoxelData {
     };
 
     public static readonly Vector2[] UVs = new Vector2[6] {
-        new Vector2Int(0, 0), new Vector2Int(0, 1), new Vector2Int(1, 1), new Vector2Int(1, 1), new Vector2Int(1, 0), new Vector2(0, 0)
+        new Vector2Int(0, 0), new Vector2Int(0, 1), new Vector2Int(1, 1), new Vector2Int(1, 1), new Vector2Int(1, 0), new Vector2Int(0, 0)
     };
 
     public static readonly int[,] Triangles = new int[6,6] {

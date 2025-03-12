@@ -7,14 +7,7 @@ public class BlockType {
 
     public uint id;
     public string name;
-
-    public int top;
-    public int front;
-    public int left;
-    public int back;
-    public int right;
-    public int bottom;
-
+    public int[] faces;
     public bool isTransparent;
     
 }

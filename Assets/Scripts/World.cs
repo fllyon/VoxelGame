@@ -74,9 +74,9 @@ public class World : MonoBehaviour {
     }
     
 
-    public static int GetGlobalBlockType(Vector3Int position) {
+    public static BlockType GetGlobalBlockType(Vector3Int position) {
         Vector3Int chunk_coord = GetChunkPosition(position);
-        if (!ChunkIsInWorld(chunk_coord)) return 0;
+        if (!ChunkIsInWorld(chunk_coord)) return Data.blockTypes[0];
         return chunks[Tuple.Create(chunk_coord.x, chunk_coord.y, chunk_coord.z).GetHashCode()]
                    .GetLocalBlockType(GetLocalPosition(position));
     }
