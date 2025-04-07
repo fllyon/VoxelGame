@@ -56,19 +56,22 @@ public class Chunk : MonoBehaviour {
                         Vector3Int nbr = new Vector3Int(nbr_x, nbr_y, nbr_z);
                         if (!GetLocalBlockType(nbr).isTransparent) { continue; }
 
+                        int textureID = blockType.faces[face];
+
+                        float xUV = VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE * (textureID % VoxelData.TEXTURE_ATLAS_SIZE);
+                        float yUV = 1.0f - (textureID / VoxelData.TEXTURE_ATLAS_SIZE) - VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE;
+
                         for (int tri_idx = 0; tri_idx < 6; ++tri_idx) {
-                            int textureID = blockType.faces[tri_idx];
 
                             int vrtx_idx = VoxelData.Triangles[face, tri_idx];
                             vertices.Add(block_position + VoxelData.Vertices[vrtx_idx]);
-
-                            float yUV = textureID / VoxelData.TEXTURE_ATLAS_SIZE;
-                            float xUV = textureID - (yUV * VoxelData.TEXTURE_ATLAS_SIZE);
-                            yUV *= VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE;
-                            yUV = 1f - yUV - VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE;
-                            xUV *= VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE;
-                            uvs.Add(new Vector2(xUV, yUV) + VoxelData.UVs[tri_idx] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE); 
-                            if (chunk_coord == Vector3Int.zero) Debug.Log(new Vector2(xUV, yUV) + VoxelData.UVs[tri_idx] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE);
+                            uvs.Add(new Vector2(xUV, yUV) + (VoxelData.UVs[tri_idx] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
+                            
+                            if (x == 0 && y == 0 && z == 0) {
+                                Debug.Log(textureID);
+                                Debug.Log(new Vector2(xUV, yUV));
+                                Debug.Log(new Vector2(xUV, yUV) + (VoxelData.UVs[tri_idx] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
+                            }
 
                             triangles.Add(vertex_count);
                             ++vertex_count;
