@@ -10,8 +10,8 @@ using UnityEngine.UIElements;
 [RequireComponent(typeof(MeshRenderer))]
 public class World : MonoBehaviour {
 
-    public static int WORLD_HEIGHT_IN_CHUNKS = 1;
-    public static int WORLD_WIDTH_IN_CHUNKS = 8;
+    public static int WORLD_HEIGHT_IN_CHUNKS = 8;
+    public static int WORLD_WIDTH_IN_CHUNKS = 16;
     public static int WORLD_HEIGHT { get { return WORLD_HEIGHT_IN_CHUNKS << Chunk.CHUNK_SIZE_BIT_SHIFT; } }
     public static int WORLD_WIDTH { get { return WORLD_WIDTH_IN_CHUNKS << Chunk.CHUNK_SIZE_BIT_SHIFT; } }
     public static int HALF_WORLD_HEIGHT_IN_CHUNKS { get { return WORLD_HEIGHT_IN_CHUNKS >> 1; } }
@@ -21,7 +21,7 @@ public class World : MonoBehaviour {
 
     // We should always keep the dictionary position as the default, these should be a temporary use
     public static Vector3Int GetChunkReadablePosition(Vector3Int position) { return position - new Vector3Int(HALF_WORLD_WIDTH_IN_CHUNKS, 0, HALF_WORLD_WIDTH_IN_CHUNKS); }
-    public static Vector3Int GetChunkWorldPosition(Vector3Int position) { return GetChunkReadablePosition(position) * new Vector3Int(Chunk.CHUNK_SIZE, 0, Chunk.CHUNK_SIZE); }
+    public static Vector3Int GetChunkWorldPosition(Vector3Int position) { return GetChunkReadablePosition(position) * Chunk.CHUNK_SIZE; }
     public static int GetChunkHash(Vector3Int position) { return Tuple.Create(position.x, position.y, position.z).GetHashCode(); }
 
     public static Dictionary<int, Chunk> chunks = new Dictionary<int, Chunk>();

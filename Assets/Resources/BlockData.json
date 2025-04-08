@@ -15,10 +15,24 @@
             "isTransparent": false
         },
         {
-            "id": 1,
+            "id": 2,
             "name": "Grass",
             
             "faces": [1, 2, 2, 2, 2, 3],
+            "isTransparent": false
+        },
+        {
+            "id": 3,
+            "name": "Dirt",
+            
+            "faces": [3, 3, 3, 3, 3, 3],
+            "isTransparent": false
+        },
+        {
+            "id": 4,
+            "name": "Stone",
+            
+            "faces": [4, 4, 4, 4, 4, 4],
             "isTransparent": false
         }
     ]

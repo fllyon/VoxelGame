@@ -12,19 +12,42 @@ public class Chunk : MonoBehaviour {
 
     int[,,] chunk_data = new int[CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE];
     Vector3Int chunk_coord;
+    Vector3Int chunk_pos;
 
     public void Init(Vector3Int chunk_coord_in) {
         chunk_coord = chunk_coord_in;
+        chunk_pos = chunk_coord_in * CHUNK_SIZE;
         GenerateChunk();
     }
 
     void GenerateChunk() {
+        
+        
+        
+        
+
         for (int x = 0; x < CHUNK_SIZE; ++x) {
             for (int z = 0; z < CHUNK_SIZE; ++z) {
 
-                float ground_height = 120;
+                int variance = 48;
+                float scale = 0.0125f;
+                int base_height = 208;
+                float var = Perlin.Noise((chunk_pos.x + x) * scale, (chunk_pos.z + z) * scale);
+                int ground_height = base_height + (int)(variance * var);
+
+                int min_dirt = 5;
+                int dirt_offset = 50;
+                int dirt_variance = 5;
+                float dirt_scale = 0.05f;
+                int dirt_size = (int)(Perlin.Noise((chunk_pos.x + x + dirt_offset) * dirt_scale, (chunk_pos.z + z + dirt_offset) * dirt_scale) * dirt_variance);
+                int stone_height = ground_height - min_dirt - dirt_size;
+
                 for (int y = 0; y < CHUNK_SIZE; ++y) {
-                    if (y + chunk_coord.y < ground_height) { chunk_data[x, y, z] = 2; }
+                    int height = chunk_pos.y + y;
+                    if (height == 0) { chunk_data[x, y, z] = 1; }
+                    else if (height < stone_height) { chunk_data[x, y, z] = 4; }
+                    else if (height < ground_height) { chunk_data[x, y, z] = 3; }
+                    else if (height == ground_height) { chunk_data[x, y, z] = 2; }
                     else { chunk_data[x, y, z] = 0; }
                 }
 
@@ -93,7 +116,7 @@ public class Chunk : MonoBehaviour {
     }
 
     public Vector3Int GetGlobalPosition(Vector3Int position) {
-        return (chunk_coord * CHUNK_SIZE) + position;
+        return chunk_pos + position;
     }
 
     public BlockType GetLocalBlockType(Vector3Int position) {
