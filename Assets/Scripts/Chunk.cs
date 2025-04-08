@@ -66,12 +66,6 @@ public class Chunk : MonoBehaviour {
                             int vrtx_idx = VoxelData.Triangles[face, tri_idx];
                             vertices.Add(block_position + VoxelData.Vertices[vrtx_idx]);
                             uvs.Add(new Vector2(xUV, yUV) + (VoxelData.UVs[tri_idx] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
-                            
-                            if (x == 0 && y == 0 && z == 0) {
-                                Debug.Log(textureID);
-                                Debug.Log(new Vector2(xUV, yUV));
-                                Debug.Log(new Vector2(xUV, yUV) + (VoxelData.UVs[tri_idx] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
-                            }
 
                             triangles.Add(vertex_count);
                             ++vertex_count;
@@ -104,8 +98,6 @@ public class Chunk : MonoBehaviour {
 
     public BlockType GetLocalBlockType(Vector3Int position) {
         if (LocalPositionIsInChunk(position)) return Data.blockTypes[chunk_data[position.x, position.y, position.z]];
-        return Data.blockTypes[0];
-
-        // return World.GetGlobalBlockType(GetGlobalPosition(position));
+        return World.GetGlobalBlockType(GetGlobalPosition(position));
     }
 }

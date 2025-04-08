@@ -61,10 +61,9 @@ public class World : MonoBehaviour {
     }
 
     public static Vector3Int GetChunkPosition(Vector3Int position) {
-        int x = position.x < 0 ? Mathf.CeilToInt(position.x / Chunk.CHUNK_SIZE) : Mathf.FloorToInt(position.x / Chunk.CHUNK_SIZE);
-        int y = position.x < 0 ? Mathf.CeilToInt(position.y / Chunk.CHUNK_SIZE) : Mathf.FloorToInt(position.y / Chunk.CHUNK_SIZE);
-        int z = position.x < 0 ? Mathf.CeilToInt(position.z / Chunk.CHUNK_SIZE) : Mathf.FloorToInt(position.z / Chunk.CHUNK_SIZE);
-        return new Vector3Int(x, y, z);
+        return new Vector3Int(Mathf.FloorToInt(position.x / (float)Chunk.CHUNK_SIZE),
+                              Mathf.FloorToInt(position.y / (float)Chunk.CHUNK_SIZE),
+                              Mathf.FloorToInt(position.z / (float)Chunk.CHUNK_SIZE));
     }
 
     public static Vector3Int GetLocalPosition(Vector3Int position) {
@@ -78,7 +77,7 @@ public class World : MonoBehaviour {
         Vector3Int chunk_coord = GetChunkPosition(position);
         if (!ChunkIsInWorld(chunk_coord)) return Data.blockTypes[0];
         return chunks[Tuple.Create(chunk_coord.x, chunk_coord.y, chunk_coord.z).GetHashCode()]
-                   .GetLocalBlockType(GetLocalPosition(position));
+                   .GetLocalBlockType(GetLocalPosition(position - (chunk_coord * Chunk.CHUNK_SIZE)));
     }
 
 }
