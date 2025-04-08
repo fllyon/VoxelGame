@@ -11,7 +11,7 @@ using UnityEngine.UIElements;
 public class World : MonoBehaviour {
 
     public static int WORLD_HEIGHT_IN_CHUNKS = 1;
-    public static int WORLD_WIDTH_IN_CHUNKS = 4;
+    public static int WORLD_WIDTH_IN_CHUNKS = 8;
     public static int WORLD_HEIGHT { get { return WORLD_HEIGHT_IN_CHUNKS << Chunk.CHUNK_SIZE_BIT_SHIFT; } }
     public static int WORLD_WIDTH { get { return WORLD_WIDTH_IN_CHUNKS << Chunk.CHUNK_SIZE_BIT_SHIFT; } }
     public static int HALF_WORLD_HEIGHT_IN_CHUNKS { get { return WORLD_HEIGHT_IN_CHUNKS >> 1; } }
@@ -45,6 +45,8 @@ public class World : MonoBehaviour {
                     curr_chunk.AddComponent<MeshFilter>();
                     curr_chunk.AddComponent<MeshRenderer>();
                     curr_chunk.AddComponent<Chunk>();
+
+                    curr_chunk.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
                     Chunk curr_component = curr_chunk.GetComponent<Chunk>();
                     curr_component.Init(curr_coords);
