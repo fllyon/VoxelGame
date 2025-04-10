@@ -41,6 +41,13 @@
             
             "faces": [5, 5, 5, 5, 5, 5],
             "isTransparent": false
+        },
+        {
+            "id": 5,
+            "name": "Hellstone",
+            
+            "faces": [6, 6, 6, 6, 6, 6],
+            "isTransparent": false
         }
     ]
 }

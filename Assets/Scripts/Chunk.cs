@@ -29,11 +29,13 @@ public class Chunk : MonoBehaviour {
                 int surface_height = WorldGen.GetSurfaceHeight(chunk_pos.x + x, chunk_pos.z + z);
                 int stone_height = surface_height - WorldGen.GetDirtDepth(chunk_pos.x + x, chunk_pos.z + z);
                 int deepstone_height = WorldGen.GetDeepstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
+                int hellstone_height = WorldGen.GetHellstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
 
                 int height = chunk_pos.y;
                 for (int y = 0; y < CHUNK_SIZE; ++y) {
 
                     if (height == 0) { chunk_data[x, y, z] = 1; }
+                    else if (height < hellstone_height) { chunk_data[x, y, z] = 6; }
                     else if (height < deepstone_height) { chunk_data[x, y, z] = 5; }
                     else if (height < stone_height) { chunk_data[x, y, z] = 4; }
                     else if (height < surface_height) { chunk_data[x, y, z] = 3; }
