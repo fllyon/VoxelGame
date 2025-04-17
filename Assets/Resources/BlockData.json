@@ -36,14 +36,14 @@
             "isTransparent": false
         },
         {
-            "id": 4,
+            "id": 5,
             "name": "Deep Stone",
             
             "faces": [5, 5, 5, 5, 5, 5],
             "isTransparent": false
         },
         {
-            "id": 5,
+            "id": 6,
             "name": "Hellstone",
             
             "faces": [6, 6, 6, 6, 6, 6],

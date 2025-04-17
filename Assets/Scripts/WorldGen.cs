@@ -52,4 +52,37 @@ class WorldGen {
         return hellstone_base + (int)(Perlin.Noise((global_x + hellstone_offset - 0.1f) * hellstone_scale, 
                                                   (global_z + hellstone_offset - 0.1f) * hellstone_scale) * hellstone_variance);
     }
+
+    // Cave Generation
+    const float cave_scale = 0.08f;
+    const int cave_offset = 32768;
+    const float cave_threshold = 0.2f;
+    
+    public static bool IsCave(int global_x, int global_y, int global_z) {
+        float output = Perlin.Noise((global_x + cave_offset) * cave_scale,
+                                    (global_y + cave_offset) * cave_scale,
+                                    (global_z + cave_offset) * cave_scale);
+        return cave_threshold <= output;
+    }
+    
+    public static bool IsHellCave(int global_x, int global_y, int global_z) {
+        float output = Perlin.Noise((global_x + cave_offset) * cave_scale,
+                                    (global_y + cave_offset) * cave_scale,
+                                    (global_z + cave_offset) * cave_scale);
+        return cave_threshold <= output;
+    }
+
+    // Generation functions for underground layers
+    public static int GetStoneLayerBlock(int global_x, int global_y, int global_z) {
+        if (IsCave(global_x, global_y, global_z)) { return 0; }
+        return 4;
+    }
+    public static int GetDeepstoneLayerBlock(int global_x, int global_y, int global_z) {
+        if (IsCave(global_x, global_y, global_z)) { return 0; }
+        return 5;
+    }
+    public static int GetHellstoneLayerBlock(int global_x, int global_y, int global_z) {
+        if (IsHellCave(global_x, global_y, global_z)) { return 0; }
+        return 6;
+    }
 }

@@ -33,11 +33,10 @@ public class Chunk : MonoBehaviour {
 
                 int height = chunk_pos.y;
                 for (int y = 0; y < CHUNK_SIZE; ++y) {
-
                     if (height == 0) { chunk_data[x, y, z] = 1; }
-                    else if (height < hellstone_height) { chunk_data[x, y, z] = 6; }
-                    else if (height < deepstone_height) { chunk_data[x, y, z] = 5; }
-                    else if (height < stone_height) { chunk_data[x, y, z] = 4; }
+                    else if (height < hellstone_height) { chunk_data[x, y, z] = WorldGen.GetHellstoneLayerBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z);; }
+                    else if (height < deepstone_height) { chunk_data[x, y, z] = WorldGen.GetDeepstoneLayerBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z); }
+                    else if (height < stone_height) { chunk_data[x, y, z] = WorldGen.GetStoneLayerBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z); }
                     else if (height < surface_height) { chunk_data[x, y, z] = 3; }
                     else if (height == surface_height) { chunk_data[x, y, z] = 2; }
                     else { break; }
