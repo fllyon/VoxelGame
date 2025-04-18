@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 class WorldGen {
@@ -65,24 +66,33 @@ class WorldGen {
         return cave_threshold <= output;
     }
     
-    public static bool IsHellCave(int global_x, int global_y, int global_z) {
-        float output = Perlin.Noise((global_x + cave_offset) * cave_scale,
-                                    (global_y + cave_offset) * cave_scale,
-                                    (global_z + cave_offset) * cave_scale);
-        return cave_threshold <= output;
+    // Hell Ceiling Generation
+    const int hell_ceiling_height = 80;
+    const int hell_ceiling_variance = 6;
+
+    const int hell_ceiling_offset = 5000;
+    const float hell_ceiling_scale = 0.1f;
+
+    public static int GetHellCeilingHeight(int global_x, int global_z) {
+        return hell_ceiling_height + (int)(Perlin.Noise((global_x + hell_ceiling_offset - 0.1f) * hell_ceiling_scale, 
+                                                        (global_z + hell_ceiling_offset - 0.1f) * hell_ceiling_scale) * hell_ceiling_variance);
     }
 
-    // Generation functions for underground layers
-    public static int GetStoneLayerBlock(int global_x, int global_y, int global_z) {
-        if (IsCave(global_x, global_y, global_z)) { return 0; }
-        return 4;
+    // Hell Floor Generation
+    const int hell_floor_height = 15;
+    const int hell_floor_variance = 12;
+
+    const int hell_floot_offset = 2400;
+    const float hell_floor_scale = 0.05f;
+
+    public static int GetHellFloorHeight(int global_x, int global_z) {
+        return hell_floor_height + (int)(Perlin.Noise((global_x + hell_floot_offset - 0.1f) * hell_floor_scale, 
+                                                      (global_z + hell_floot_offset - 0.1f) * hell_floor_scale) * hell_floor_variance);
     }
-    public static int GetDeepstoneLayerBlock(int global_x, int global_y, int global_z) {
+
+    // Cave Generation
+    public static int GetUndergroundBlock(int global_x, int global_y, int global_z, int block_id) {
         if (IsCave(global_x, global_y, global_z)) { return 0; }
-        return 5;
-    }
-    public static int GetHellstoneLayerBlock(int global_x, int global_y, int global_z) {
-        if (IsHellCave(global_x, global_y, global_z)) { return 0; }
-        return 6;
+        return block_id;
     }
 }

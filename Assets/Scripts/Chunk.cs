@@ -30,13 +30,17 @@ public class Chunk : MonoBehaviour {
                 int stone_height = surface_height - WorldGen.GetDirtDepth(chunk_pos.x + x, chunk_pos.z + z);
                 int deepstone_height = WorldGen.GetDeepstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
                 int hellstone_height = WorldGen.GetHellstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
+                int hell_ceiling_height = WorldGen.GetHellCeilingHeight(chunk_pos.x + x, chunk_pos.z + z);
+                int hell_floor_height = WorldGen.GetHellFloorHeight(chunk_pos.x + x, chunk_pos.z + z);
 
                 int height = chunk_pos.y;
                 for (int y = 0; y < CHUNK_SIZE; ++y) {
                     if (height == 0) { chunk_data[x, y, z] = 1; }
-                    else if (height < hellstone_height) { chunk_data[x, y, z] = WorldGen.GetHellstoneLayerBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z);; }
-                    else if (height < deepstone_height) { chunk_data[x, y, z] = WorldGen.GetDeepstoneLayerBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z); }
-                    else if (height < stone_height) { chunk_data[x, y, z] = WorldGen.GetStoneLayerBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z); }
+                    else if (height < hell_floor_height) { chunk_data[x, y, z] = 6; }
+                    else if (height < hell_ceiling_height) { chunk_data[x, y, z] = 0; }
+                    else if (height < hellstone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 6); }
+                    else if (height < deepstone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 5); }
+                    else if (height < stone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 4); }
                     else if (height < surface_height) { chunk_data[x, y, z] = 3; }
                     else if (height == surface_height) { chunk_data[x, y, z] = 2; }
                     else { break; }
