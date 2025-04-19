@@ -30,6 +30,30 @@ class WorldGen {
                                               (global_z + dirt_offset - 0.1f) * dirt_scale) * dirt_variance);
     }
 
+    // Desert Surface Height
+    const int desert_surface_base = 416;
+    const int desert_surface_variance = 16;
+
+    const float desert_surface_scale = 0.01f;
+
+    public static int GetDesertSurfaceHeight(int global_x, int global_z) {
+        
+        return desert_surface_base + (int)(Perlin.Noise((global_x - 0.1f) * desert_surface_scale, 
+                                                        (global_z - 0.1f) * desert_surface_scale) * desert_surface_variance);
+    }
+
+    // Sand Depth
+    const int sand_base = 5;
+    const int sand_variance = 3;
+
+    const int sand_offset = 500;
+    const float sand_scale = 0.1f;
+
+    public static int GetSandDepth(int global_x, int global_z) {
+        return sand_base + (int)(Perlin.Noise((global_x + sand_offset - 0.1f) * sand_scale, 
+                                              (global_z + sand_offset - 0.1f) * sand_scale) * sand_variance);
+    }
+
     // Deepstone Height
     const int deepstone_base = 256;
     const int deepstone_variance = 10;
@@ -94,5 +118,20 @@ class WorldGen {
     public static int GetUndergroundBlock(int global_x, int global_y, int global_z, int block_id) {
         if (IsCave(global_x, global_y, global_z)) { return 0; }
         return block_id;
+    }
+
+    // Biome Values
+    const int forest_offset = 12345;
+    const float forest_scale = 0.005f;
+    public static float GetForestWeight(int global_x, int global_y) {
+        return Perlin.Noise((global_x + forest_offset - 0.1f) * forest_scale, 
+                            (global_y + forest_offset - 0.1f) * forest_scale);
+    }
+
+    const int desert_offset = 8008135;
+    const float desert_scale = 0.005f;
+    public static float GetDesertWeight(int global_x, int global_y) {
+        return Perlin.Noise((global_x + desert_offset - 0.1f) * desert_scale, 
+                            (global_y + desert_offset - 0.1f) * desert_scale);
     }
 }

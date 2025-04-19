@@ -23,29 +23,62 @@ public class Chunk : MonoBehaviour {
 
     void GenerateChunk() {
 
+        if (chunk_coord.y < 11) return;
+
         for (int x = 0; x < CHUNK_SIZE; ++x) {
             for (int z = 0; z < CHUNK_SIZE; ++z) {
 
-                int surface_height = WorldGen.GetSurfaceHeight(chunk_pos.x + x, chunk_pos.z + z);
-                int stone_height = surface_height - WorldGen.GetDirtDepth(chunk_pos.x + x, chunk_pos.z + z);
-                int deepstone_height = WorldGen.GetDeepstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
-                int hellstone_height = WorldGen.GetHellstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
-                int hell_ceiling_height = WorldGen.GetHellCeilingHeight(chunk_pos.x + x, chunk_pos.z + z);
-                int hell_floor_height = WorldGen.GetHellFloorHeight(chunk_pos.x + x, chunk_pos.z + z);
+                // Determine Biome
+                float forest = WorldGen.GetForestWeight(chunk_pos.x + x, chunk_pos.z + z);
+                float desert = WorldGen.GetDesertWeight(chunk_pos.x + x, chunk_pos.z + z);
 
-                int height = chunk_pos.y;
-                for (int y = 0; y < CHUNK_SIZE; ++y) {
-                    if (height == 0) { chunk_data[x, y, z] = 1; }
-                    else if (height < hell_floor_height) { chunk_data[x, y, z] = 6; }
-                    else if (height < hell_ceiling_height) { chunk_data[x, y, z] = 0; }
-                    else if (height < hellstone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 6); }
-                    else if (height < deepstone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 5); }
-                    else if (height < stone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 4); }
-                    else if (height < surface_height) { chunk_data[x, y, z] = 3; }
-                    else if (height == surface_height) { chunk_data[x, y, z] = 2; }
-                    else { break; }
+                if (forest > desert) {
 
-                    height += 1;
+                    int surface_height = WorldGen.GetSurfaceHeight(chunk_pos.x + x, chunk_pos.z + z);
+                    int stone_height = surface_height - WorldGen.GetDirtDepth(chunk_pos.x + x, chunk_pos.z + z);
+                    int deepstone_height = WorldGen.GetDeepstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
+                    int hellstone_height = WorldGen.GetHellstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
+                    int hell_ceiling_height = WorldGen.GetHellCeilingHeight(chunk_pos.x + x, chunk_pos.z + z);
+                    int hell_floor_height = WorldGen.GetHellFloorHeight(chunk_pos.x + x, chunk_pos.z + z);
+
+                    int height = chunk_pos.y;
+                    for (int y = 0; y < CHUNK_SIZE; ++y) {
+                        if (height == 0) { chunk_data[x, y, z] = 1; }
+                        else if (height < hell_floor_height) { chunk_data[x, y, z] = 6; }
+                        else if (height < hell_ceiling_height) { chunk_data[x, y, z] = 0; }
+                        else if (height < hellstone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 6); }
+                        else if (height < deepstone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 5); }
+                        else if (height < stone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 4); }
+                        else if (height < surface_height) { chunk_data[x, y, z] = 3; }
+                        else if (height == surface_height) { chunk_data[x, y, z] = 2; }
+                        else { break; }
+
+                        height += 1;
+                    }
+
+                } else {
+
+                    int surface_height = WorldGen.GetDesertSurfaceHeight(chunk_pos.x + x, chunk_pos.z + z);
+                    int stone_height = surface_height - WorldGen.GetSandDepth(chunk_pos.x + x, chunk_pos.z + z);
+                    int deepstone_height = WorldGen.GetDeepstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
+                    int hellstone_height = WorldGen.GetHellstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
+                    int hell_ceiling_height = WorldGen.GetHellCeilingHeight(chunk_pos.x + x, chunk_pos.z + z);
+                    int hell_floor_height = WorldGen.GetHellFloorHeight(chunk_pos.x + x, chunk_pos.z + z);
+
+                    int height = chunk_pos.y;
+                    for (int y = 0; y < CHUNK_SIZE; ++y) {
+                        if (height == 0) { chunk_data[x, y, z] = 1; }
+                        else if (height < hell_floor_height) { chunk_data[x, y, z] = 6; }
+                        else if (height < hell_ceiling_height) { chunk_data[x, y, z] = 0; }
+                        else if (height < hellstone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 6); }
+                        else if (height < deepstone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 5); }
+                        else if (height < stone_height) { chunk_data[x, y, z] = WorldGen.GetUndergroundBlock(chunk_pos.x + x, chunk_pos.y + y, chunk_pos.z + z, 4); }
+                        else if (height <= surface_height) { chunk_data[x, y, z] = 7; }
+                        else { break; }
+
+                        height += 1;
+                    }
+
                 }
                 
             }
