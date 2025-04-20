@@ -23,23 +23,24 @@ public class Chunk : MonoBehaviour {
 
     void GenerateChunk() {
 
-        if (chunk_coord.y < 11) return;
+        // Uncomment to only render surface
+        // if (chunk_coord.y < 10) return;
 
         for (int x = 0; x < CHUNK_SIZE; ++x) {
             for (int z = 0; z < CHUNK_SIZE; ++z) {
 
                 // Determine Biome
-                float forest = WorldGen.GetForestWeight(chunk_pos.x + x, chunk_pos.z + z);
-                float desert = WorldGen.GetDesertWeight(chunk_pos.x + x, chunk_pos.z + z);
+                float forest = 0.5f + WorldGen.GetForestWeight(chunk_pos.x + x, chunk_pos.z + z);
+                float desert = 0.5f + WorldGen.GetDesertWeight(chunk_pos.x + x, chunk_pos.z + z);
+
+                int surface_height = WorldGen.GetBiomeMeshedHeight(chunk_pos.x + x, chunk_pos.z + z, forest, desert);
+                int stone_height = surface_height - WorldGen.GetDirtDepth(chunk_pos.x + x, chunk_pos.z + z);
+                int deepstone_height = WorldGen.GetDeepstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
+                int hellstone_height = WorldGen.GetHellstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
+                int hell_ceiling_height = WorldGen.GetHellCeilingHeight(chunk_pos.x + x, chunk_pos.z + z);
+                int hell_floor_height = WorldGen.GetHellFloorHeight(chunk_pos.x + x, chunk_pos.z + z);
 
                 if (forest > desert) {
-
-                    int surface_height = WorldGen.GetSurfaceHeight(chunk_pos.x + x, chunk_pos.z + z);
-                    int stone_height = surface_height - WorldGen.GetDirtDepth(chunk_pos.x + x, chunk_pos.z + z);
-                    int deepstone_height = WorldGen.GetDeepstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
-                    int hellstone_height = WorldGen.GetHellstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
-                    int hell_ceiling_height = WorldGen.GetHellCeilingHeight(chunk_pos.x + x, chunk_pos.z + z);
-                    int hell_floor_height = WorldGen.GetHellFloorHeight(chunk_pos.x + x, chunk_pos.z + z);
 
                     int height = chunk_pos.y;
                     for (int y = 0; y < CHUNK_SIZE; ++y) {
@@ -58,13 +59,6 @@ public class Chunk : MonoBehaviour {
 
                 } else {
 
-                    int surface_height = WorldGen.GetDesertSurfaceHeight(chunk_pos.x + x, chunk_pos.z + z);
-                    int stone_height = surface_height - WorldGen.GetSandDepth(chunk_pos.x + x, chunk_pos.z + z);
-                    int deepstone_height = WorldGen.GetDeepstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
-                    int hellstone_height = WorldGen.GetHellstoneHeight(chunk_pos.x + x, chunk_pos.z + z);
-                    int hell_ceiling_height = WorldGen.GetHellCeilingHeight(chunk_pos.x + x, chunk_pos.z + z);
-                    int hell_floor_height = WorldGen.GetHellFloorHeight(chunk_pos.x + x, chunk_pos.z + z);
-
                     int height = chunk_pos.y;
                     for (int y = 0; y < CHUNK_SIZE; ++y) {
                         if (height == 0) { chunk_data[x, y, z] = 1; }
@@ -80,7 +74,6 @@ public class Chunk : MonoBehaviour {
                     }
 
                 }
-                
             }
         }
     }

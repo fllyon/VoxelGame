@@ -1,4 +1,5 @@
 using System;
+using Unity.Collections;
 using UnityEngine;
 
 class WorldGen {
@@ -12,10 +13,10 @@ class WorldGen {
 
     const float surface_scale = 0.0125f;
 
-    public static int GetSurfaceHeight(int global_x, int global_z) {
+    public static double GetSurfaceHeight(int global_x, int global_z) {
         
-        return surface_base + (int)(Perlin.Noise((global_x - 0.1f) * surface_scale, 
-                                                 (global_z - 0.1f) * surface_scale) * surface_variance);
+        return surface_base + Perlin.Noise((global_x - 0.1f) * surface_scale, 
+                                           (global_z - 0.1f) * surface_scale) * surface_variance;
     }
 
     // Dirt Depth
@@ -31,15 +32,15 @@ class WorldGen {
     }
 
     // Desert Surface Height
-    const int desert_surface_base = 416;
-    const int desert_surface_variance = 16;
+    const int desert_surface_base = 368;
+    const int desert_surface_variance = 10;
 
     const float desert_surface_scale = 0.01f;
 
-    public static int GetDesertSurfaceHeight(int global_x, int global_z) {
+    public static float GetDesertSurfaceHeight(int global_x, int global_z) {
         
-        return desert_surface_base + (int)(Perlin.Noise((global_x - 0.1f) * desert_surface_scale, 
-                                                        (global_z - 0.1f) * desert_surface_scale) * desert_surface_variance);
+        return desert_surface_base + Perlin.Noise((global_x - 0.1f) * desert_surface_scale, 
+                                                  (global_z - 0.1f) * desert_surface_scale) * desert_surface_variance;
     }
 
     // Sand Depth
@@ -122,16 +123,50 @@ class WorldGen {
 
     // Biome Values
     const int forest_offset = 12345;
-    const float forest_scale = 0.005f;
+    const float forest_scale = 0.0025f;
     public static float GetForestWeight(int global_x, int global_y) {
         return Perlin.Noise((global_x + forest_offset - 0.1f) * forest_scale, 
                             (global_y + forest_offset - 0.1f) * forest_scale);
     }
 
     const int desert_offset = 8008135;
-    const float desert_scale = 0.005f;
+    const float desert_scale = 0.0025f;
     public static float GetDesertWeight(int global_x, int global_y) {
         return Perlin.Noise((global_x + desert_offset - 0.1f) * desert_scale, 
                             (global_y + desert_offset - 0.1f) * desert_scale);
+    }
+
+    // Biome Meshed Surface Height
+    public static int GetBiomeMeshedHeight(int global_x, int global_z, double forest, double desert) {
+
+        double diff = Math.Abs(forest - desert);
+
+        if (diff < 0.05f) {
+
+            diff *= 10;
+            double upper = 0.5f + diff;
+            double lower = 0.5f - diff;
+            upper *= upper *= upper;
+            lower *= lower *= lower;
+
+            if (desert > forest) { 
+                desert = upper / (upper + lower);
+                forest = lower / (upper + lower);
+            } else {
+                forest = upper / (upper + lower);
+                desert = lower / (upper + lower);
+            }
+
+            double forest_surface = GetSurfaceHeight(global_x, global_z);
+            double desert_surface = GetDesertSurfaceHeight(global_x, global_z);
+
+            return (int)(forest_surface * forest + desert_surface * desert);
+
+        } else if (desert > forest) {
+            return (int)GetDesertSurfaceHeight(global_x, global_z);
+        } else {
+            return (int)GetSurfaceHeight(global_x, global_z);
+        }
+
     }
 }

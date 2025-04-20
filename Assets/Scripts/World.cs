@@ -11,7 +11,7 @@ using UnityEngine.UIElements;
 public class World : MonoBehaviour {
 
     public static int WORLD_HEIGHT_IN_CHUNKS = 16;
-    public static int WORLD_WIDTH_IN_CHUNKS = 20;
+    public static int WORLD_WIDTH_IN_CHUNKS = 8;
     public static int WORLD_HEIGHT { get { return WORLD_HEIGHT_IN_CHUNKS << Chunk.CHUNK_SIZE_BIT_SHIFT; } }
     public static int WORLD_WIDTH { get { return WORLD_WIDTH_IN_CHUNKS << Chunk.CHUNK_SIZE_BIT_SHIFT; } }
     public static int HALF_WORLD_HEIGHT_IN_CHUNKS { get { return WORLD_HEIGHT_IN_CHUNKS >> 1; } }
