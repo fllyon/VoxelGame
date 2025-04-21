@@ -11,7 +11,7 @@ using UnityEngine.UIElements;
 public class World : MonoBehaviour {
 
     public static int WORLD_HEIGHT_IN_CHUNKS = 16;
-    public static int WORLD_WIDTH_IN_CHUNKS = 8;
+    public static int WORLD_WIDTH_IN_CHUNKS = 16;
     public static int WORLD_HEIGHT { get { return WORLD_HEIGHT_IN_CHUNKS << Chunk.CHUNK_SIZE_BIT_SHIFT; } }
     public static int WORLD_WIDTH { get { return WORLD_WIDTH_IN_CHUNKS << Chunk.CHUNK_SIZE_BIT_SHIFT; } }
     public static int HALF_WORLD_HEIGHT_IN_CHUNKS { get { return WORLD_HEIGHT_IN_CHUNKS >> 1; } }
@@ -54,29 +54,33 @@ public class World : MonoBehaviour {
                 }
             }
         }
+
+        float forest = 0.5f + WorldGen.GetForestWeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH);
+        float desert = 0.5f + WorldGen.GetDesertWeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH);
+        GameObject.Find("Main Camera").GetComponent<Transform>().position = new Vector3(0, WorldGen.GetBiomeMeshedHeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, forest, desert) + 2, 0);
+
     }
 
-    public static bool ChunkIsInWorld(Vector3Int position) {   
+    public static bool ChunkIsInWorld(Global_Coord position) {   
         return 0 <= position.x && position.x < WORLD_WIDTH_IN_CHUNKS && 
-               0 <= position.y && position.y < WORLD_HEIGHT_IN_CHUNKS &&
-               0 <= position.z && position.z < WORLD_WIDTH_IN_CHUNKS;
+               0 <= position.z && position.z < WORLD_WIDTH_IN_CHUNKS &&
+               0 <= position.y && position.y < WORLD_HEIGHT_IN_CHUNKS;
     }
 
-    public static Vector3Int GetChunkPosition(Vector3Int position) {
-        return new Vector3Int(Mathf.FloorToInt(position.x / (float)Chunk.CHUNK_SIZE),
-                              Mathf.FloorToInt(position.y / (float)Chunk.CHUNK_SIZE),
-                              Mathf.FloorToInt(position.z / (float)Chunk.CHUNK_SIZE));
+    public static Global_Coord GetChunkPosition(Global_Coord position) {
+        return new Global_Coord(Mathf.FloorToInt(position.x / (float)Chunk.CHUNK_SIZE),
+                              Mathf.FloorToInt(position.z / (float)Chunk.CHUNK_SIZE),
+                              Mathf.FloorToInt(position.y / (float)Chunk.CHUNK_SIZE));
     }
 
-    public static Vector3Int GetLocalPosition(Vector3Int position) {
-        return new Vector3Int(position.x % Chunk.CHUNK_SIZE, 
-                              position.y % Chunk.CHUNK_SIZE, 
-                              position.z % Chunk.CHUNK_SIZE);
+    public static Coord GetLocalPosition(Global_Coord position) {
+        return new Coord((sbyte)(position.x % Chunk.CHUNK_SIZE), 
+                         (sbyte)(position.z % Chunk.CHUNK_SIZE), 
+                         (sbyte)(position.y % Chunk.CHUNK_SIZE));
     }
     
-
-    public static BlockType GetGlobalBlockType(Vector3Int position) {
-        Vector3Int chunk_coord = GetChunkPosition(position);
+    public static BlockType GetGlobalBlockType(Global_Coord position) {
+        Global_Coord chunk_coord = GetChunkPosition(position);
         if (!ChunkIsInWorld(chunk_coord)) return Data.blockTypes[0];
         return chunks[Tuple.Create(chunk_coord.x, chunk_coord.y, chunk_coord.z).GetHashCode()]
                    .GetLocalBlockType(GetLocalPosition(position - (chunk_coord * Chunk.CHUNK_SIZE)));

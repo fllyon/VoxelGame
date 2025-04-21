@@ -26,5 +26,28 @@ public static class VoxelData {
     public static readonly Vector3Int[] directions = new Vector3Int[6] {
         new Vector3Int(0, 1, 0), new Vector3Int(0, 0, -1), new Vector3Int(-1, 0, 0), new Vector3Int(0, 0, 1), new Vector3Int(1, 0, 0), new Vector3Int(0, -1, 0)
     };
+}
 
+public struct Coord {
+    public sbyte x;
+    public sbyte z;
+    public sbyte y;
+
+    public Coord(sbyte x_in, sbyte z_in, sbyte y_in) { x = x_in; y = y_in; z = z_in; }
+    public Coord(Global_Coord coord) { x = (sbyte)coord.x; z = (sbyte)coord.z; y = (sbyte)coord.y; }
+    public Coord(Vector3Int coord) { x = (sbyte)coord.x; z = (sbyte)coord.z; y = (sbyte)coord.y; }
+}
+
+public struct Global_Coord {
+    public int x;
+    public int z;
+    public int y;
+
+    public Global_Coord(int x_in, int z_in, int y_in) { x = x_in; y = y_in; z = z_in; }
+    public Global_Coord(Global_Coord coord) { x = coord.x; z = coord.z; y = coord.y; }
+    public Global_Coord(Vector3Int coord) { x = coord.x; z = coord.z; y = coord.y; }
+
+    public static Global_Coord operator *(Global_Coord coord, float multiplier) { return new Global_Coord((int)(coord.x * multiplier), (int)(coord.z * multiplier), (int)(coord.y * multiplier)); }
+    public static Global_Coord operator +(Global_Coord global_coord, Coord local_coord) { return new Global_Coord(global_coord.x + local_coord.x, global_coord.z + local_coord.z, global_coord.y + local_coord.y); }
+    public static Global_Coord operator -(Global_Coord global_coord, Global_Coord local_coord) { return new Global_Coord(global_coord.x - local_coord.x, global_coord.z - local_coord.z, global_coord.y - local_coord.y); }
 }

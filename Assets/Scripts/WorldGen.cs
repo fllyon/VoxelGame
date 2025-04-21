@@ -116,7 +116,7 @@ class WorldGen {
     }
 
     // Cave Generation
-    public static int GetUndergroundBlock(int global_x, int global_y, int global_z, int block_id) {
+    public static byte GetUndergroundBlock(int global_x, int global_y, int global_z, byte block_id) {
         if (IsCave(global_x, global_y, global_z)) { return 0; }
         return block_id;
     }
