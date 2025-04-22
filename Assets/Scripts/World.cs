@@ -1,17 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 
-[RequireComponent(typeof(MeshFilter))]
-[RequireComponent(typeof(MeshRenderer))]
 public class World : MonoBehaviour {
 
     public static int WORLD_HEIGHT_IN_CHUNKS = 16;
-    public static int WORLD_WIDTH_IN_CHUNKS = 16;
+    public static int WORLD_WIDTH_IN_CHUNKS = 8;
     public static int WORLD_HEIGHT { get { return WORLD_HEIGHT_IN_CHUNKS << Chunk.CHUNK_SIZE_BIT_SHIFT; } }
     public static int WORLD_WIDTH { get { return WORLD_WIDTH_IN_CHUNKS << Chunk.CHUNK_SIZE_BIT_SHIFT; } }
     public static int HALF_WORLD_HEIGHT_IN_CHUNKS { get { return WORLD_HEIGHT_IN_CHUNKS >> 1; } }
@@ -19,14 +14,17 @@ public class World : MonoBehaviour {
     public static int HALF_WORLD_HEIGHT { get { return WORLD_HEIGHT >> 1; } }
     public static int HALF_WORLD_WIDTH { get { return WORLD_WIDTH >> 1; } }
 
-    // We should always keep the dictionary position as the default, these should be a temporary use
-    public static Vector3Int GetChunkReadablePosition(Vector3Int position) { return position - new Vector3Int(HALF_WORLD_WIDTH_IN_CHUNKS, 0, HALF_WORLD_WIDTH_IN_CHUNKS); }
-    public static Vector3Int GetChunkWorldPosition(Vector3Int position) { return GetChunkReadablePosition(position) * Chunk.CHUNK_SIZE; }
-    public static int GetChunkHash(Vector3Int position) { return Tuple.Create(position.x, position.y, position.z).GetHashCode(); }
+    public static Global_Coord GetChunkReadablePosition(Global_Coord position) { return position - new Global_Coord(HALF_WORLD_WIDTH_IN_CHUNKS, HALF_WORLD_WIDTH_IN_CHUNKS, 0); }
+    public static Global_Coord GetPlayerReadablePosition(Global_Coord position) { return position - new Global_Coord(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, 0); }
+    public static Global_Coord GetChunkWorldPosition(Global_Coord position) { return GetChunkReadablePosition(position) * Chunk.CHUNK_SIZE; }
+    public static int GetChunkHash(Global_Coord position) { return Tuple.Create(position.x, position.y, position.z).GetHashCode(); }
 
     public static Dictionary<int, Chunk> chunks = new Dictionary<int, Chunk>();
+
     public static Material material;
     public static Data data;
+
+    public static Global_Coord player_coord;
 
 
     void Start() {
@@ -39,14 +37,10 @@ public class World : MonoBehaviour {
                 for (int z = 0; z < WORLD_WIDTH_IN_CHUNKS; ++z) {
                     
                     GameObject curr_chunk = new GameObject("chunk ("+x+" "+y+" "+z+")");
-                    Vector3Int curr_coords = new Vector3Int(x, y, z);
+                    Global_Coord curr_coords = new Global_Coord(x, z, y);
 
-                    curr_chunk.transform.position = GetChunkWorldPosition(curr_coords);
-                    curr_chunk.AddComponent<MeshFilter>();
-                    curr_chunk.AddComponent<MeshRenderer>();
+                    curr_chunk.transform.position = GetChunkWorldPosition(curr_coords).ToVec3();
                     curr_chunk.AddComponent<Chunk>();
-
-                    curr_chunk.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
                     Chunk curr_component = curr_chunk.GetComponent<Chunk>();
                     curr_component.Init(curr_coords);
@@ -57,7 +51,8 @@ public class World : MonoBehaviour {
 
         float forest = 0.5f + WorldGen.GetForestWeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH);
         float desert = 0.5f + WorldGen.GetDesertWeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH);
-        GameObject.Find("Main Camera").GetComponent<Transform>().position = new Vector3(0, WorldGen.GetBiomeMeshedHeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, forest, desert) + 2, 0);
+        player_coord = new Global_Coord(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, WorldGen.GetBiomeMeshedHeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, forest, desert) + 2);
+        GameObject.Find("Main Camera").GetComponent<Transform>().position = GetPlayerReadablePosition(player_coord).ToVec3();
 
     }
 

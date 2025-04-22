@@ -1,17 +1,19 @@
+using System.Runtime.InteropServices;
 using UnityEngine;
+
 
 public static class VoxelData {
 
-    public static int TEXTURE_ATLAS_SIZE = 16;
+    public static byte TEXTURE_ATLAS_SIZE = 16;
     public static float NORMALISED_TEXTURE_ATLAS_SIZE { get { return 1f / TEXTURE_ATLAS_SIZE; } }
     
-    public static readonly Vector3Int[] Vertices = new Vector3Int[8] {
-        new Vector3Int(0, 1, 0), new Vector3Int(0, 1, 1), new Vector3Int(1, 1, 1), new Vector3Int(1, 1, 0), 
-        new Vector3Int(0, 0, 0), new Vector3Int(0, 0, 1), new Vector3Int(1, 0, 1), new Vector3Int(1, 0, 0)
+    public static readonly Vector3[] Vertices = new Vector3[8] {
+        new Vector3(0, 1, 0), new Vector3(0, 1, 1), new Vector3(1, 1, 1), new Vector3(1, 1, 0), 
+        new Vector3(0, 0, 0), new Vector3(0, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 0)
     };
 
     public static readonly Vector2[] UVs = new Vector2[6] {
-        new Vector2Int(0, 0), new Vector2Int(0, 1), new Vector2Int(1, 1), new Vector2Int(1, 1), new Vector2Int(1, 0), new Vector2Int(0, 0)
+        new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 0), new Vector2(0, 0)
     };
 
     public static readonly int[,] Triangles = new int[6,6] {
@@ -23,8 +25,8 @@ public static class VoxelData {
         {5,  4,  7,  7,  6,  5}  // Bottom
     };
 
-    public static readonly Vector3Int[] directions = new Vector3Int[6] {
-        new Vector3Int(0, 1, 0), new Vector3Int(0, 0, -1), new Vector3Int(-1, 0, 0), new Vector3Int(0, 0, 1), new Vector3Int(1, 0, 0), new Vector3Int(0, -1, 0)
+    public static readonly Vector3[] directions = new Vector3[6] {
+        new Vector3(0, 1, 0), new Vector3(0, 0, -1), new Vector3(-1, 0, 0), new Vector3(0, 0, 1), new Vector3(1, 0, 0), new Vector3(0, -1, 0)
     };
 }
 
@@ -36,6 +38,7 @@ public struct Coord {
     public Coord(sbyte x_in, sbyte z_in, sbyte y_in) { x = x_in; y = y_in; z = z_in; }
     public Coord(Global_Coord coord) { x = (sbyte)coord.x; z = (sbyte)coord.z; y = (sbyte)coord.y; }
     public Coord(Vector3Int coord) { x = (sbyte)coord.x; z = (sbyte)coord.z; y = (sbyte)coord.y; }
+    public readonly Vector3 ToVec3() { return new Vector3(x, y, z); }
 }
 
 public struct Global_Coord {
@@ -46,8 +49,18 @@ public struct Global_Coord {
     public Global_Coord(int x_in, int z_in, int y_in) { x = x_in; y = y_in; z = z_in; }
     public Global_Coord(Global_Coord coord) { x = coord.x; z = coord.z; y = coord.y; }
     public Global_Coord(Vector3Int coord) { x = coord.x; z = coord.z; y = coord.y; }
+    public readonly Vector3 ToVec3() { return new Vector3(x, y, z); }
 
     public static Global_Coord operator *(Global_Coord coord, float multiplier) { return new Global_Coord((int)(coord.x * multiplier), (int)(coord.z * multiplier), (int)(coord.y * multiplier)); }
     public static Global_Coord operator +(Global_Coord global_coord, Coord local_coord) { return new Global_Coord(global_coord.x + local_coord.x, global_coord.z + local_coord.z, global_coord.y + local_coord.y); }
     public static Global_Coord operator -(Global_Coord global_coord, Global_Coord local_coord) { return new Global_Coord(global_coord.x - local_coord.x, global_coord.z - local_coord.z, global_coord.y - local_coord.y); }
 }
+
+// Revisit at a later date, still don't understand
+// ===============================================
+// [StructLayout(LayoutKind.Sequential, Pack = 1)]
+// public struct VertexData {
+//     public byte px, py, pz, pb; // Position data, with pb as a buffer
+//     public sbyte nx, ny, nz, nb; // Normal data, with nb as a buffer
+//     public float ux, uy; // UV data
+// }
