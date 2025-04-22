@@ -1,4 +1,6 @@
+using System;
 using System.Runtime.InteropServices;
+using Unity.VisualScripting;
 using UnityEngine;
 
 
@@ -46,6 +48,7 @@ public struct Global_Coord {
     public int z;
     public int y;
 
+    public Global_Coord(Vector3 coord) { x = (int)coord.x; z = (int)coord.z; y = (int)coord.y; }
     public Global_Coord(int x_in, int z_in, int y_in) { x = x_in; y = y_in; z = z_in; }
     public Global_Coord(Global_Coord coord) { x = coord.x; z = coord.z; y = coord.y; }
     public Global_Coord(Vector3Int coord) { x = coord.x; z = coord.z; y = coord.y; }
@@ -54,6 +57,11 @@ public struct Global_Coord {
     public static Global_Coord operator *(Global_Coord coord, float multiplier) { return new Global_Coord((int)(coord.x * multiplier), (int)(coord.z * multiplier), (int)(coord.y * multiplier)); }
     public static Global_Coord operator +(Global_Coord global_coord, Coord local_coord) { return new Global_Coord(global_coord.x + local_coord.x, global_coord.z + local_coord.z, global_coord.y + local_coord.y); }
     public static Global_Coord operator -(Global_Coord global_coord, Global_Coord local_coord) { return new Global_Coord(global_coord.x - local_coord.x, global_coord.z - local_coord.z, global_coord.y - local_coord.y); }
+    public static bool operator ==(Global_Coord coord1, Global_Coord coord2) { return coord1.x == coord2.x && coord1.z == coord2.z && coord1.y == coord2.y; }
+    public static bool operator !=(Global_Coord coord1, Global_Coord coord2) { return coord1.x != coord2.x || coord1.z != coord2.z || coord1.y != coord2.y; }
+    public override readonly bool Equals(object obj) { if (obj is Global_Coord coord) { return x == coord.x && y == coord.y && z == coord.z; } else { return false; } }
+    public override readonly int GetHashCode() { return HashCode.Combine(x, z, y); }
+
 }
 
 // Revisit at a later date, still don't understand

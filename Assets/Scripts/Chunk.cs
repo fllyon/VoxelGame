@@ -16,8 +16,8 @@ public class Chunk : MonoBehaviour {
     byte[,,] chunk_data = new byte[CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE];
     GameObject up, left, back, right, front, down;
 
-    Global_Coord chunk_coord;
-    Global_Coord chunk_pos;
+    public Global_Coord chunk_coord;
+    public Global_Coord chunk_pos;
 
 
     public void Init(Global_Coord chunk_coord_in) {
@@ -200,12 +200,16 @@ public class Chunk : MonoBehaviour {
             mesh_renderers[face].material = World.material;
         }
 
-        if (World.player_coord.y < chunk_pos.y) { up.SetActive(false); }
-        if (World.player_coord.z > chunk_pos.z+32) { left.SetActive(false); }
-        if (World.player_coord.x > chunk_pos.x+32) { back.SetActive(false); }
-        if (World.player_coord.z < chunk_pos.z) { right.SetActive(false); }
-        if (World.player_coord.x < chunk_pos.x) { front.SetActive(false); }
-        if (World.player_coord.y > chunk_pos.y+32) { down.SetActive(false); }
+        ReconsiderFaces();
+    }
+
+    public void ReconsiderFaces() {
+        up.SetActive(World.player_coord.y >= chunk_pos.y);
+        left.SetActive(World.player_coord.z <= chunk_pos.z+32);
+        back.SetActive(World.player_coord.x <= chunk_pos.x+32);
+        right.SetActive(World.player_coord.z >= chunk_pos.z);
+        front.SetActive(World.player_coord.x >= chunk_pos.x);
+        down.SetActive(World.player_coord.y <= chunk_pos.y+32);
     }
 
     static bool LocalPositionIsInChunk(Coord position) {

@@ -52,8 +52,19 @@ public class World : MonoBehaviour {
         float forest = 0.5f + WorldGen.GetForestWeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH);
         float desert = 0.5f + WorldGen.GetDesertWeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH);
         player_coord = new Global_Coord(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, WorldGen.GetBiomeMeshedHeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, forest, desert) + 2);
-        GameObject.Find("Main Camera").GetComponent<Transform>().position = GetPlayerReadablePosition(player_coord).ToVec3();
+        GameObject.Find("Player").GetComponent<Transform>().position = GetPlayerReadablePosition(player_coord).ToVec3();
 
+    }
+
+    public static void PlayerMovedChunks() {
+        Global_Coord player_chunk = GetChunkPosition(player_coord);
+        foreach (Chunk chunk in chunks.Values) {
+            if (Math.Abs(chunk.chunk_coord.x - player_chunk.x) < 2 ||
+                Math.Abs(chunk.chunk_coord.z - player_chunk.z) < 2 ||
+                Math.Abs(chunk.chunk_coord.y - player_chunk.y) < 2) {
+                    chunk.ReconsiderFaces();
+            }
+        }
     }
 
     public static bool ChunkIsInWorld(Global_Coord position) {   
