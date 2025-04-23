@@ -30,6 +30,19 @@ public static class VoxelData {
     public static readonly Vector3[] directions = new Vector3[6] {
         new Vector3(0, 1, 0), new Vector3(0, 0, -1), new Vector3(-1, 0, 0), new Vector3(0, 0, 1), new Vector3(1, 0, 0), new Vector3(0, -1, 0)
     };
+
+    public static readonly Vector3[,] FaceVertices = new Vector3[6,4] {
+        { new Vector3(0, 1, 0), new Vector3(0, 1, 1), new Vector3(1, 1, 1), new Vector3(1, 1, 0) }, // Top
+        { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 0, 0) }, // Front
+        { new Vector3(0, 0, 1), new Vector3(0, 1, 1), new Vector3(0, 1, 0), new Vector3(0, 0, 0) }, // Left
+        { new Vector3(1, 0, 1), new Vector3(1, 1, 1), new Vector3(0, 1, 1), new Vector3(0, 0, 0) }, // Back
+        { new Vector3(1, 0, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 1), new Vector3(1, 0, 1) }, // Right
+        { new Vector3(0, 0, 1), new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 0, 1) } // Bottom
+    };
+
+    public static readonly Vector2[] FaceUVs = new Vector2[4] {
+        new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0)
+    };
 }
 
 public struct Coord {

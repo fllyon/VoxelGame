@@ -72,7 +72,7 @@ public class Chunk : MonoBehaviour {
     void GenerateChunk() {
 
         // Uncomment to only render surface
-        // if (chunk_coord.y < 10) return;
+        if (chunk_coord.y < 10) return;
 
         for (byte x = 0; x < CHUNK_SIZE; ++x) {
             for (byte z = 0; z < CHUNK_SIZE; ++z) {
@@ -85,6 +85,8 @@ public class Chunk : MonoBehaviour {
                 float desert = 0.5f + WorldGen.GetDesertWeight(global_x, global_z);
 
                 int surface_height = WorldGen.GetBiomeMeshedHeight(global_x, global_z, forest, desert);
+                if (surface_height < chunk_pos.y) { continue; }
+
                 int stone_height = surface_height - WorldGen.GetDirtDepth(global_x, global_z);
                 int deepstone_height = WorldGen.GetDeepstoneHeight(global_x, global_z);
                 int hellstone_height = WorldGen.GetHellstoneHeight(global_x, global_z);
@@ -171,18 +173,32 @@ public class Chunk : MonoBehaviour {
 
                         int textureID = blockType.faces[face];
 
-                        float xUV = VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE * (textureID % VoxelData.TEXTURE_ATLAS_SIZE);
-                        float yUV = 1.0f - (textureID / VoxelData.TEXTURE_ATLAS_SIZE) - VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE;
+                        Vector3 block_position_vec3 = block_position.ToVec3();
+                        vertices[face].Add(block_position_vec3 + VoxelData.FaceVertices[face, 0]);
+                        vertices[face].Add(block_position_vec3 + VoxelData.FaceVertices[face, 1]);
+                        vertices[face].Add(block_position_vec3 + VoxelData.FaceVertices[face, 2]);
+                        vertices[face].Add(block_position_vec3 + VoxelData.FaceVertices[face, 3]);
+                        
+                        Vector2 base_uv = new Vector2(VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE * (textureID % VoxelData.TEXTURE_ATLAS_SIZE),
+                                                      1.0f - (textureID / VoxelData.TEXTURE_ATLAS_SIZE) - VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE);
+                        uvs[face].Add(base_uv + (VoxelData.FaceUVs[0] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
+                        uvs[face].Add(base_uv + (VoxelData.FaceUVs[1] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
+                        uvs[face].Add(base_uv + (VoxelData.FaceUVs[2] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
+                        uvs[face].Add(base_uv + (VoxelData.FaceUVs[3] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
 
-                        for (int tri_idx = 0; tri_idx < 6; ++tri_idx) {
-                            int vrtx_idx = VoxelData.Triangles[face, tri_idx];
+                        normals[face].Add(VoxelData.directions[face]);
+                        normals[face].Add(VoxelData.directions[face]);
+                        normals[face].Add(VoxelData.directions[face]);
+                        normals[face].Add(VoxelData.directions[face]);
 
-                            vertices[face].Add(block_position.ToVec3() + VoxelData.Vertices[vrtx_idx]);
-                            normals[face].Add(VoxelData.directions[face]);
-                            uvs[face].Add(new Vector2(xUV, yUV) + (VoxelData.UVs[tri_idx] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
-                            triangles[face].Add(vertex_count[face]);
-                            vertex_count[face]++;
-                        }
+                        triangles[face].Add(vertex_count[face]);
+                        triangles[face].Add(vertex_count[face]+1);
+                        triangles[face].Add(vertex_count[face]+2);
+                        triangles[face].Add(vertex_count[face]+2);
+                        triangles[face].Add(vertex_count[face]+3);
+                        triangles[face].Add(vertex_count[face]);
+
+                        vertex_count[face] += 4;
                     }
                 
                 }
