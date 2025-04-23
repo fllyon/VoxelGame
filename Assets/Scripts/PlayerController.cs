@@ -6,6 +6,7 @@ public class PlayerController : MonoBehaviour {
     float speed = 15;
 
     void Start() {
+        GameObject.Find("Camera").GetComponent<Camera>().nearClipPlane = 0.1f;
         last_chunk = World.GetChunkPosition(World.player_coord);
     }
 

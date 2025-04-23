@@ -15,7 +15,9 @@ public class Chunk : MonoBehaviour {
 
     byte[,,] chunk_data = new byte[CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE];
     GameObject up, left, back, right, front, down;
-
+    
+    public bool mesh_enabled = false;
+    public bool mesh_generated = false;
     public Global_Coord chunk_coord;
     public Global_Coord chunk_pos;
 
@@ -70,9 +72,6 @@ public class Chunk : MonoBehaviour {
     }
 
     void GenerateChunk() {
-
-        // Uncomment to only render surface
-        if (chunk_coord.y < 10) return;
 
         for (byte x = 0; x < CHUNK_SIZE; ++x) {
             for (byte z = 0; z < CHUNK_SIZE; ++z) {
@@ -129,7 +128,8 @@ public class Chunk : MonoBehaviour {
         }
     }
 
-    void Start() {
+    public void GenerateMesh() {
+        if (mesh_generated) { return; }
 
         MeshFilter[] mesh_filters = {
             up.GetComponent<MeshFilter>(),
@@ -217,6 +217,16 @@ public class Chunk : MonoBehaviour {
         }
 
         ReconsiderFaces();
+        mesh_generated = true;
+    }
+
+    public void DisableMesh() {
+        up.SetActive(false);
+        left.SetActive(false);
+        back.SetActive(false);
+        right.SetActive(false);
+        front.SetActive(false);
+        down.SetActive(false);
     }
 
     public void ReconsiderFaces() {

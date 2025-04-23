@@ -1,9 +1,14 @@
 using System;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 
 public class World : MonoBehaviour {
+
+    public static int VIEW_DISTANCE = 6;
+    public static int LOAD_DISTANCE = 7;
 
     public static int WORLD_HEIGHT_IN_CHUNKS = 16;
     public static int WORLD_WIDTH_IN_CHUNKS = 16;
@@ -17,7 +22,7 @@ public class World : MonoBehaviour {
     public static Global_Coord GetChunkReadablePosition(Global_Coord position) { return position - new Global_Coord(HALF_WORLD_WIDTH_IN_CHUNKS, HALF_WORLD_WIDTH_IN_CHUNKS, 0); }
     public static Global_Coord GetPlayerReadablePosition(Global_Coord position) { return position - new Global_Coord(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, 0); }
     public static Global_Coord GetChunkWorldPosition(Global_Coord position) { return GetChunkReadablePosition(position) * Chunk.CHUNK_SIZE; }
-    public static int GetChunkHash(Global_Coord position) { return Tuple.Create(position.x, position.y, position.z).GetHashCode(); }
+    public static int GetChunkHash(Global_Coord position) { return position.GetHashCode(); }
 
     public static Dictionary<int, Chunk> chunks = new Dictionary<int, Chunk>();
 
@@ -32,9 +37,15 @@ public class World : MonoBehaviour {
         material = Resources.Load<Material>("BlockTextures");
         data = new Data();
 
-        for (int y = 0; y < WORLD_HEIGHT_IN_CHUNKS; ++y) {
-            for (int x = 0; x < WORLD_WIDTH_IN_CHUNKS; ++x) {
-                for (int z = 0; z < WORLD_WIDTH_IN_CHUNKS; ++z) {
+        float forest = 0.5f + WorldGen.GetForestWeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH);
+        float desert = 0.5f + WorldGen.GetDesertWeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH);
+        player_coord = new Global_Coord(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, WorldGen.GetBiomeMeshedHeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, forest, desert) + 2);
+        GameObject.Find("Player").GetComponent<Transform>().position = GetPlayerReadablePosition(player_coord).ToVec3();
+
+        Global_Coord player_chunk = GetChunkPosition(player_coord);
+        for (int x = player_chunk.x - LOAD_DISTANCE; x < player_chunk.x + LOAD_DISTANCE; ++x) {
+            for (int z = player_chunk.z - LOAD_DISTANCE; z < player_chunk.z + LOAD_DISTANCE; ++z) {
+                for (int y = player_chunk.y - LOAD_DISTANCE; y < player_chunk.y + LOAD_DISTANCE; ++y) {
                     
                     GameObject curr_chunk = new GameObject("chunk ("+x+" "+y+" "+z+")");
                     Global_Coord curr_coords = new Global_Coord(x, z, y);
@@ -45,26 +56,89 @@ public class World : MonoBehaviour {
                     Chunk curr_component = curr_chunk.GetComponent<Chunk>();
                     curr_component.Init(curr_coords);
                     chunks[GetChunkHash(curr_coords)] = curr_component;
+
                 }
             }
         }
 
-        float forest = 0.5f + WorldGen.GetForestWeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH);
-        float desert = 0.5f + WorldGen.GetDesertWeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH);
-        player_coord = new Global_Coord(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, WorldGen.GetBiomeMeshedHeight(HALF_WORLD_WIDTH, HALF_WORLD_WIDTH, forest, desert) + 2);
-        GameObject.Find("Player").GetComponent<Transform>().position = GetPlayerReadablePosition(player_coord).ToVec3();
+        for (int x = player_chunk.x - VIEW_DISTANCE; x < player_chunk.x + VIEW_DISTANCE; ++x) {
+            for (int z = player_chunk.z - VIEW_DISTANCE; z < player_chunk.z + VIEW_DISTANCE; ++z) {
+                for (int y = player_chunk.y - VIEW_DISTANCE; y < player_chunk.y + VIEW_DISTANCE; ++y) {
+
+                    Chunk chunk = chunks[GetChunkHash(new Global_Coord(x, z, y))];
+                    chunk.GenerateMesh();
+
+                }
+            }
+        }
 
     }
 
     public static void PlayerMovedChunks() {
         Global_Coord player_chunk = GetChunkPosition(player_coord);
-        foreach (Chunk chunk in chunks.Values) {
-            if (Math.Abs(chunk.chunk_coord.x - player_chunk.x) < 2 ||
-                Math.Abs(chunk.chunk_coord.z - player_chunk.z) < 2 ||
-                Math.Abs(chunk.chunk_coord.y - player_chunk.y) < 2) {
-                    chunk.ReconsiderFaces();
+        HashSet<int> chunks_to_remove = new HashSet<int>(chunks.Keys);
+
+        // Load/Unload all necessary chunks
+        for (int x = player_chunk.x - LOAD_DISTANCE; x < player_chunk.x + LOAD_DISTANCE; ++x) {
+            for (int z = player_chunk.z - LOAD_DISTANCE; z < player_chunk.z + LOAD_DISTANCE; ++z) {
+                for (int y = player_chunk.y - LOAD_DISTANCE; y < player_chunk.y + LOAD_DISTANCE; ++y) {
+
+                    Global_Coord chunk_coord = new Global_Coord(x, z, y);
+                    int chunk_hash = GetChunkHash(chunk_coord);
+
+                    // If the chunk exists
+                    if (chunks.ContainsKey(chunk_hash)) {
+
+                        if (Math.Abs(player_chunk.x - x) > VIEW_DISTANCE &&
+                            Math.Abs(player_chunk.z - z) > VIEW_DISTANCE &&
+                            Math.Abs(player_chunk.y - y) > VIEW_DISTANCE) { 
+                                chunks[chunk_hash].DisableMesh();
+                        }
+
+                        chunks_to_remove.Remove(chunk_hash);
+                        
+                    } else {
+
+                        GameObject curr_chunk = new GameObject("chunk ("+x+" "+y+" "+z+")");
+                        Global_Coord curr_coords = new Global_Coord(x, z, y);
+
+                        curr_chunk.transform.position = GetChunkWorldPosition(curr_coords).ToVec3();
+                        curr_chunk.AddComponent<Chunk>();
+
+                        Chunk curr_component = curr_chunk.GetComponent<Chunk>();
+                        curr_component.Init(curr_coords);
+                        chunks[GetChunkHash(curr_coords)] = curr_component;
+
+                    }
+                }
             }
         }
+
+        // Render all chunks within view distance
+        for (int x = player_chunk.x - VIEW_DISTANCE; x < player_chunk.x + VIEW_DISTANCE; ++x) {
+            for (int z = player_chunk.z - VIEW_DISTANCE; z < player_chunk.z + VIEW_DISTANCE; ++z) {
+                for (int y = player_chunk.y - VIEW_DISTANCE; y < player_chunk.y + VIEW_DISTANCE; ++y) {
+                    Chunk chunk = chunks[GetChunkHash(new Global_Coord(x, z, y))];
+
+                    if (!chunk.mesh_generated) { chunk.GenerateMesh(); }
+
+                    // If the chunk needs to reconsider its mesh faces, do that
+                    Global_Coord chunk_coord = new Global_Coord(x, z, y);
+                    if (Math.Abs(chunk_coord.x - player_chunk.x) < 2 ||
+                        Math.Abs(chunk_coord.z - player_chunk.z) < 2 ||
+                        Math.Abs(chunk_coord.y - player_chunk.y) < 2) {
+                            chunk.ReconsiderFaces();
+                    }
+                }
+            }
+        }
+
+        // Delete all chunks not within the load distance
+        foreach (int chunk_hash in chunks_to_remove) {
+            Destroy(chunks[chunk_hash].gameObject);
+            chunks.Remove(chunk_hash);
+        }
+        chunks_to_remove.Clear();
     }
 
     public static bool ChunkIsInWorld(Global_Coord position) {   
@@ -88,8 +162,7 @@ public class World : MonoBehaviour {
     public static BlockType GetGlobalBlockType(Global_Coord position) {
         Global_Coord chunk_coord = GetChunkPosition(position);
         if (!ChunkIsInWorld(chunk_coord)) return Data.blockTypes[0];
-        return chunks[Tuple.Create(chunk_coord.x, chunk_coord.y, chunk_coord.z).GetHashCode()]
-                   .GetLocalBlockType(GetLocalPosition(position - (chunk_coord * Chunk.CHUNK_SIZE)));
+        return chunks[GetChunkHash(chunk_coord)].GetLocalBlockType(GetLocalPosition(position - (chunk_coord * Chunk.CHUNK_SIZE)));
     }
 
 }
