@@ -227,6 +227,7 @@ public class Chunk : MonoBehaviour {
         right.SetActive(false);
         front.SetActive(false);
         down.SetActive(false);
+        mesh_enabled = false;
     }
 
     public void ReconsiderFaces() {
@@ -236,6 +237,7 @@ public class Chunk : MonoBehaviour {
         right.SetActive(World.player_coord.z >= chunk_pos.z);
         front.SetActive(World.player_coord.x >= chunk_pos.x);
         down.SetActive(World.player_coord.y <= chunk_pos.y+32);
+        mesh_enabled = true;
     }
 
     static bool LocalPositionIsInChunk(Coord position) {

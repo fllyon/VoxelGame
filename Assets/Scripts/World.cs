@@ -86,12 +86,12 @@ public class World : MonoBehaviour {
                     Global_Coord chunk_coord = new Global_Coord(x, z, y);
                     int chunk_hash = GetChunkHash(chunk_coord);
 
-                    // If the chunk exists
                     if (chunks.ContainsKey(chunk_hash)) {
 
                         if (Math.Abs(player_chunk.x - x) > VIEW_DISTANCE &&
                             Math.Abs(player_chunk.z - z) > VIEW_DISTANCE &&
-                            Math.Abs(player_chunk.y - y) > VIEW_DISTANCE) { 
+                            Math.Abs(player_chunk.y - y) > VIEW_DISTANCE &&
+                            chunks[chunk_hash].mesh_enabled) { 
                                 chunks[chunk_hash].DisableMesh();
                         }
 
@@ -99,15 +99,12 @@ public class World : MonoBehaviour {
                         
                     } else {
 
-                        GameObject curr_chunk = new GameObject("chunk ("+x+" "+y+" "+z+")");
-                        Global_Coord curr_coords = new Global_Coord(x, z, y);
+                        GameObject obj = new GameObject("chunk ("+x+" "+y+" "+z+")");
+                        obj.transform.position = GetChunkWorldPosition(chunk_coord).ToVec3();
 
-                        curr_chunk.transform.position = GetChunkWorldPosition(curr_coords).ToVec3();
-                        curr_chunk.AddComponent<Chunk>();
-
-                        Chunk curr_component = curr_chunk.GetComponent<Chunk>();
-                        curr_component.Init(curr_coords);
-                        chunks[GetChunkHash(curr_coords)] = curr_component;
+                        Chunk chunk = obj.AddComponent<Chunk>();
+                        chunks[chunk_hash] = chunk;
+                        chunk.Init(chunk_coord);
 
                     }
                 }
