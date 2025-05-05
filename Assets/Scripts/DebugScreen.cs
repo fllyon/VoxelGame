@@ -17,7 +17,6 @@ public class DebugScreen : MonoBehaviour {
 
         world = GameObject.Find("World").GetComponent<World>();
         text = GetComponent<TextMeshProUGUI>();
-        Debug.Log(text);
 
         program_name = "Flynn Lyon - Voxel Engine\n";
         framerate = 0;

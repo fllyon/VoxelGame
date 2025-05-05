@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -6,7 +7,8 @@ using UnityEngine.UIElements;
 
 
 public class World : MonoBehaviour {
-
+    
+    public static int DETAIL_DISTANCE = 50;
     public static int VIEW_DISTANCE = 6;
     public static int LOAD_DISTANCE = 7;
 
@@ -25,6 +27,9 @@ public class World : MonoBehaviour {
     public static int GetChunkHash(Global_Coord position) { return position.GetHashCode(); }
 
     public static Dictionary<int, Chunk> chunks = new Dictionary<int, Chunk>();
+
+    public bool rendering_chunks = false;
+    public static Queue<Chunk> chunksToRender = new Queue<Chunk>();
 
     public static Material material;
     public static Data data;
@@ -66,12 +71,17 @@ public class World : MonoBehaviour {
                 for (int y = player_chunk.y - VIEW_DISTANCE; y < player_chunk.y + VIEW_DISTANCE; ++y) {
 
                     Chunk chunk = chunks[GetChunkHash(new Global_Coord(x, z, y))];
-                    chunk.GenerateMesh();
+                    if (GetChunkDistance(chunk.chunk_pos) < DETAIL_DISTANCE) chunk.GenerateMesh();
+                    else chunksToRender.Enqueue(chunk);
 
                 }
             }
         }
 
+    }
+
+    void Update() {
+        if (chunksToRender.Count != 0 && !rendering_chunks) StartCoroutine("GenerateChunkMeshes");
     }
 
     public static void PlayerMovedChunks() {
@@ -117,7 +127,7 @@ public class World : MonoBehaviour {
                 for (int y = player_chunk.y - VIEW_DISTANCE; y < player_chunk.y + VIEW_DISTANCE; ++y) {
                     Chunk chunk = chunks[GetChunkHash(new Global_Coord(x, z, y))];
 
-                    if (!chunk.mesh_generated) { chunk.GenerateMesh(); }
+                    if (!chunk.mesh_generated) { chunksToRender.Enqueue(chunk); }
 
                     // If the chunk needs to reconsider its mesh faces, do that
                     Global_Coord chunk_coord = new Global_Coord(x, z, y);
@@ -160,6 +170,27 @@ public class World : MonoBehaviour {
         Global_Coord chunk_coord = GetChunkPosition(position);
         if (!ChunkIsInWorld(chunk_coord)) return Data.blockTypes[0];
         return chunks[GetChunkHash(chunk_coord)].GetLocalBlockType(GetLocalPosition(position - (chunk_coord * Chunk.CHUNK_SIZE)));
+    }
+
+    public float GetChunkDistance(Global_Coord coord) {
+        int x = Mathf.Abs(coord.x - player_coord.x);
+        int y = Mathf.Abs(coord.y - player_coord.y);
+        int z = Mathf.Abs(coord.z - player_coord.z);
+        float output = Mathf.Sqrt(x * x + y * y + z * z);
+        Debug.Log(output);
+        return output;
+    }
+
+    IEnumerator GenerateChunkMeshes() {
+        rendering_chunks = true;
+
+        while (chunksToRender.Count != 0) {
+            chunksToRender.Dequeue().GenerateMesh();
+            yield return null;
+        }
+
+        rendering_chunks = false;
+        yield return null;
     }
 
 }
