@@ -1,257 +1,176 @@
-using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using JetBrains.Annotations;
 using Unity.Collections;
+using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.Rendering;
 
+public class Chunk : MonoBehaviour
+{
 
-public class Chunk : MonoBehaviour {
-
-    // To save runtime, hardcode bit shift instead of manually calculating
     public static int CHUNK_SIZE = 32;
-    public static int CHUNK_SIZE_BIT_SHIFT = 5;
 
-    byte[,,] chunk_data = new byte[CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE];
-    GameObject up, left, back, right, front, down;
-    
-    public bool mesh_enabled = false;
-    public bool mesh_generated = false;
-    public Global_Coord chunk_coord;
-    public Global_Coord chunk_pos;
+    MeshFilter mesh_filter;
+    MeshRenderer mesh_renderer;
 
+    int3 chunk_pos;
+    NativeArray<int> blocks;
+    NativeArray<Vertex> vertex_data;
+    NativeArray<int3> directions;
+    NativeArray<int> texture_map;
 
-    public void Init(Global_Coord chunk_coord_in) {
-        chunk_coord = chunk_coord_in;
-        chunk_pos = chunk_coord * CHUNK_SIZE;
+    void Start() {
+        chunk_pos = (int3)new float3(transform.position.x, transform.position.y, transform.position.z);
+        mesh_filter = GetComponent<MeshFilter>();
+        mesh_renderer = GetComponent<MeshRenderer>();
+        blocks = new NativeArray<int>(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+        vertex_data = VertexData.GetVertices();
+        directions = VertexData.GetDirections();
+        texture_map = VertexData.GetTextureMap();
 
-        up = new GameObject();
-        up.transform.parent = gameObject.transform;
-        up.transform.localPosition = new Vector3(0, 0, 0);
-        up.AddComponent<MeshFilter>();
-        up.AddComponent<MeshRenderer>();
-        up.name = "up";
+        // Chunk generation
+        ChunkGenerateJob generate_job = new ChunkGenerateJob() { _chunk_pos = chunk_pos, _blocks = blocks};
+        JobHandle generation_handle = generate_job.Schedule();
+        generation_handle.Complete();
 
-        left = new GameObject();
-        left.transform.parent = gameObject.transform;
-        left.transform.localPosition = new Vector3(0, 0, 0);
-        left.AddComponent<MeshFilter>();
-        left.AddComponent<MeshRenderer>();
-        left.name = "left";
+        NativeList<float3> vertices = new NativeList<float3>(Allocator.TempJob);
+        NativeList<float3> normals = new NativeList<float3>(Allocator.TempJob);
+        NativeList<float2> uvs = new NativeList<float2>(Allocator.TempJob);
+        NativeList<int> triangles = new NativeList<int>(Allocator.TempJob);
 
-        back = new GameObject();
-        back.transform.parent = gameObject.transform;
-        back.transform.localPosition = new Vector3(0, 0, 0);
-        back.AddComponent<MeshFilter>();
-        back.AddComponent<MeshRenderer>();
-        back.name = "back";
+        // Chunk mesh
+        ChunkMeshJob mesh_job = new ChunkMeshJob() { _blocks = blocks, _vertex_data = vertex_data, _directions = directions, _texture_map = texture_map, _vertices = vertices, _normals = normals, _uvs = uvs, _triangles = triangles };
+        JobHandle mesh_handle = mesh_job.Schedule();
+        mesh_handle.Complete();
 
-        right = new GameObject();
-        right.transform.parent = gameObject.transform;
-        right.transform.localPosition = new Vector3(0, 0, 0);
-        right.AddComponent<MeshFilter>();
-        right.AddComponent<MeshRenderer>();
-        right.name = "right";
+        Vector3[] _vertices = new Vector3[vertices.Length];
+        Vector3[] _normals = new Vector3[normals.Length];
+        Vector2[] _uvs = new Vector2[uvs.Length];
+        int[] _triangles = new int[triangles.Length];
 
-        front = new GameObject();
-        front.transform.parent = gameObject.transform;
-        front.transform.localPosition = new Vector3(0, 0, 0);
-        front.AddComponent<MeshFilter>();
-        front.AddComponent<MeshRenderer>();
-        front.name = "front";
+        for (int idx = 0; idx < vertices.Length; ++idx) { _vertices[idx] = vertices[idx]; }
+        for (int idx = 0; idx < normals.Length; ++idx) { _normals[idx] = normals[idx]; }
+        for (int idx = 0; idx < uvs.Length; ++idx) { _uvs[idx] = uvs[idx]; }
+        for (int idx = 0; idx < triangles.Length; ++idx) { _triangles[idx] = triangles[idx]; }
 
-        down = new GameObject();
-        down.transform.parent = gameObject.transform;
-        down.transform.localPosition = new Vector3(0, 0, 0);
-        down.AddComponent<MeshFilter>();
-        down.AddComponent<MeshRenderer>();
-        down.name = "down";
+        Mesh mesh = new Mesh();
+        mesh.vertices = _vertices;
+        mesh.normals = _normals;
+        mesh.uv = _uvs;
+        mesh.triangles = _triangles;
+        mesh_filter.mesh = mesh;
+        mesh_renderer.material = Resources.Load<Material>("BlockTextures");
 
-        GenerateChunk();
+        vertices.Dispose();
+        normals.Dispose();
+        uvs.Dispose();
+        triangles.Dispose();
     }
 
-    void GenerateChunk() {
-
-        for (byte x = 0; x < CHUNK_SIZE; ++x) {
-            for (byte z = 0; z < CHUNK_SIZE; ++z) {
-
-                int global_x = chunk_pos.x + x;
-                int global_z = chunk_pos.z + z;
-
-                // Determine Biome
-                float forest = 0.5f + WorldGen.GetForestWeight(global_x, global_z);
-                float desert = 0.5f + WorldGen.GetDesertWeight(global_x, global_z);
-
-                int surface_height = WorldGen.GetBiomeMeshedHeight(global_x, global_z, forest, desert);
-                if (surface_height < chunk_pos.y) { continue; }
-
-                int stone_height = surface_height - WorldGen.GetDirtDepth(global_x, global_z);
-                int deepstone_height = WorldGen.GetDeepstoneHeight(global_x, global_z);
-                int hellstone_height = WorldGen.GetHellstoneHeight(global_x, global_z);
-                int hell_ceiling_height = WorldGen.GetHellCeilingHeight(global_x, global_z);
-                int hell_floor_height = WorldGen.GetHellFloorHeight(global_x, global_z);
-
-                if (forest > desert) {
-
-                    short height = (short)chunk_pos.y;
-                    for (byte y = 0; y < CHUNK_SIZE; ++y) {
-                        if (height == 0) { chunk_data[x, z, y] = 1; }
-                        else if (height < hell_floor_height) { chunk_data[x, z, y] = 6; }
-                        else if (height < hell_ceiling_height) { chunk_data[x, z, y] = 0; }
-                        else if (height < hellstone_height) { chunk_data[x, z, y] = WorldGen.GetUndergroundBlock(global_x, height, global_z, 6); }
-                        else if (height < deepstone_height) { chunk_data[x, z, y] = WorldGen.GetUndergroundBlock(global_x, height, global_z, 5); }
-                        else if (height < stone_height) { chunk_data[x, z, y] = WorldGen.GetUndergroundBlock(global_x, height, global_z, 4); }
-                        else if (height < surface_height) { chunk_data[x, z, y] = 3; }
-                        else if (height == surface_height) { chunk_data[x, z, y] = 2; }
-                        else { break; }
-                        height += 1;
-                    }
-
-                } else {
-
-                    short height = (short)chunk_pos.y;
-                    for (byte y = 0; y < CHUNK_SIZE; ++y) {
-                        if (height == 0) { chunk_data[x, z, y] = 1; }
-                        else if (height < hell_floor_height) { chunk_data[x, z, y] = 6; }
-                        else if (height < hell_ceiling_height) { chunk_data[x, z, y] = 0; }
-                        else if (height < hellstone_height) { chunk_data[x, z, y] = WorldGen.GetUndergroundBlock(global_x, height, global_z, 6); }
-                        else if (height < deepstone_height) { chunk_data[x, z, y] = WorldGen.GetUndergroundBlock(global_x, height, global_z, 5); }
-                        else if (height < stone_height) { chunk_data[x, z, y] = WorldGen.GetUndergroundBlock(global_x, height, global_z, 4); }
-                        else if (height <= surface_height) { chunk_data[x, z, y] = 7; }
-                        else { break; }
-                        height += 1;
-                    }
-
-                }
-            }
-        }
+    void OnDestroy() {
+        blocks.Dispose();
+        vertex_data.Dispose();
+        directions.Dispose();
     }
 
-    public void GenerateMesh() {
-        if (mesh_generated) { return; }
+    public struct ChunkGenerateJob : IJob {
 
-        MeshFilter[] mesh_filters = {
-            up.GetComponent<MeshFilter>(),
-            left.GetComponent<MeshFilter>(),
-            back.GetComponent<MeshFilter>(),
-            right.GetComponent<MeshFilter>(),
-            front.GetComponent<MeshFilter>(),
-            down.GetComponent<MeshFilter>(),
-        };
+        public int3 _chunk_pos;
+        public NativeArray<int> _blocks;
 
-        MeshRenderer[] mesh_renderers = {
-            up.GetComponent<MeshRenderer>(),
-            left.GetComponent<MeshRenderer>(),
-            back.GetComponent<MeshRenderer>(),
-            right.GetComponent<MeshRenderer>(),
-            front.GetComponent<MeshRenderer>(),
-            down.GetComponent<MeshRenderer>(),
-        };
+        public void Execute() {
 
-        int[] vertex_count = {0, 0, 0, 0, 0, 0};
-        List<Vector3>[] vertices = {new List<Vector3>(), new List<Vector3>(), new List<Vector3>(), new List<Vector3>(), new List<Vector3>(), new List<Vector3>()};
-        List<Vector3>[] normals = {new List<Vector3>(), new List<Vector3>(), new List<Vector3>(), new List<Vector3>(), new List<Vector3>(), new List<Vector3>()};
-        List<Vector2>[] uvs = {new List<Vector2>(), new List<Vector2>(), new List<Vector2>(), new List<Vector2>(), new List<Vector2>(), new List<Vector2>()};
-        List<int>[] triangles = {new List<int>(), new List<int>(), new List<int>(), new List<int>(), new List<int>(), new List<int>()};
+            for (int x = 0; x < CHUNK_SIZE; ++x) {
+                for (int z = 0; z < CHUNK_SIZE; ++z) {
+                    int height = (int)(noise.cnoise(new float2(_chunk_pos.x + x, _chunk_pos.z + z) * 0.025f + 0.1f) * 4 + 40);
+                    for (int y = 0; y < CHUNK_SIZE; ++y) {
+                        int global_y = _chunk_pos.y + y;
+                        if (global_y > height) continue;
 
-        // For each block, add its face data to the relevant mesh
-        for (sbyte x = 0; x < CHUNK_SIZE; ++x) {
-            for (sbyte z = 0; z < CHUNK_SIZE; ++z) {
-                for (sbyte y = 0; y < CHUNK_SIZE; ++y) {
-
-                    if (chunk_data[x, z, y] == 0) { continue; }
-                    BlockType blockType = Data.blockTypes[chunk_data[x, z, y]];
-
-                    Coord block_position = new Coord(x, z, y);
-                    for (byte face = 0; face < 6; ++face) {
-
-                        sbyte nbr_x = (sbyte)(x + VoxelData.directions[face].x);
-                        sbyte nbr_z = (sbyte)(z + VoxelData.directions[face].z);
-                        sbyte nbr_y = (sbyte)(y + VoxelData.directions[face].y);
-                        if (!GetLocalBlockType(new Coord(nbr_x, nbr_z, nbr_y)).isTransparent) { continue; }
-
-                        int textureID = blockType.faces[face];
-
-                        Vector3 block_position_vec3 = block_position.ToVec3();
-                        vertices[face].Add(block_position_vec3 + VoxelData.FaceVertices[face, 0]);
-                        vertices[face].Add(block_position_vec3 + VoxelData.FaceVertices[face, 1]);
-                        vertices[face].Add(block_position_vec3 + VoxelData.FaceVertices[face, 2]);
-                        vertices[face].Add(block_position_vec3 + VoxelData.FaceVertices[face, 3]);
+                        int idx = x * CHUNK_SIZE * CHUNK_SIZE + z * CHUNK_SIZE + y;
+                        if (global_y == height) {
+                            _blocks[idx] = 1;
+                            continue;
+                        } else {
+                            _blocks[idx] = 2;
+                        }
                         
-                        Vector2 base_uv = new Vector2(VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE * (textureID % VoxelData.TEXTURE_ATLAS_SIZE),
-                                                      1.0f - (textureID / VoxelData.TEXTURE_ATLAS_SIZE) - VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE);
-                        uvs[face].Add(base_uv + (VoxelData.FaceUVs[0] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
-                        uvs[face].Add(base_uv + (VoxelData.FaceUVs[1] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
-                        uvs[face].Add(base_uv + (VoxelData.FaceUVs[2] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
-                        uvs[face].Add(base_uv + (VoxelData.FaceUVs[3] * VoxelData.NORMALISED_TEXTURE_ATLAS_SIZE));
-
-                        normals[face].Add(VoxelData.directions[face]);
-                        normals[face].Add(VoxelData.directions[face]);
-                        normals[face].Add(VoxelData.directions[face]);
-                        normals[face].Add(VoxelData.directions[face]);
-
-                        triangles[face].Add(vertex_count[face]);
-                        triangles[face].Add(vertex_count[face]+1);
-                        triangles[face].Add(vertex_count[face]+2);
-                        triangles[face].Add(vertex_count[face]+2);
-                        triangles[face].Add(vertex_count[face]+3);
-                        triangles[face].Add(vertex_count[face]);
-
-                        vertex_count[face] += 4;
+                        
                     }
-                
                 }
             }
         }
 
-        for (int face = 0; face < 6; ++face) {
-            Mesh mesh = new Mesh();
-            mesh.vertices = vertices[face].ToArray();
-            mesh.normals = normals[face].ToArray();
-            mesh.uv = uvs[face].ToArray();
-            mesh.triangles = triangles[face].ToArray();
+    }
+    
+    public struct ChunkMeshJob : IJob {
 
-            mesh_filters[face].mesh = mesh;
-            mesh_renderers[face].material = World.material;
+        public NativeArray<int> _blocks;
+        public NativeArray<Vertex> _vertex_data;
+        public NativeArray<int3> _directions;
+        public NativeArray<int> _texture_map;
+
+        private int _vertex_count;
+        public NativeList<float3> _vertices;
+        public NativeList<float3> _normals;
+        public NativeList<float2> _uvs;
+        public NativeList<int> _triangles;
+
+        public void Execute() {
+
+            _vertex_count = 0;
+            for (int x = 0; x < 32; ++x)
+            {
+                for (int z = 0; z < 32; ++z)
+                {
+                    for (int y = 0; y < 32; ++y)
+                    {
+                        int idx = x * 32 * 32 + z * 32 + y;
+                        int block_type = _blocks[idx];
+                        if (block_type == 0) { continue; }
+
+                        for (int face = 0; face < 6; ++face)
+                        {
+                            int3 nbr = new int3(x, z, y) + _directions[face];
+                            int n_idx = nbr.x * 32 * 32 + nbr.y * 32 + nbr.z;
+
+                            if (0 <= nbr.x && nbr.x < 32 &&
+                                0 <= nbr.z && nbr.z < 32 && 
+                                0 <= nbr.y && nbr.y < 32 &&
+                                _blocks[n_idx] != 0) { continue; }
+
+                            int vrtx = 4 * face;
+
+                            float3 block_pos = new float3(x, y, z);
+                            _vertices.Add(block_pos + _vertex_data[vrtx].position);
+                            _vertices.Add(block_pos + _vertex_data[vrtx + 1].position);
+                            _vertices.Add(block_pos + _vertex_data[vrtx + 2].position);
+                            _vertices.Add(block_pos + _vertex_data[vrtx + 3].position);
+
+                            _normals.Add(_vertex_data[vrtx].normal);
+                            _normals.Add(_vertex_data[vrtx].normal);
+                            _normals.Add(_vertex_data[vrtx].normal);
+                            _normals.Add(_vertex_data[vrtx].normal);
+
+                            int texture_idx = _texture_map[(block_type - 1) * 6 + face];
+                            float2 base_texture = new float2(0.0625f * (texture_idx % 16), 1.0f - (texture_idx / 16) - 0.0625f);
+                            _uvs.Add(base_texture + _vertex_data[vrtx].uv);
+                            _uvs.Add(base_texture + _vertex_data[vrtx + 1].uv);
+                            _uvs.Add(base_texture + _vertex_data[vrtx + 2].uv);
+                            _uvs.Add(base_texture + _vertex_data[vrtx + 3].uv);
+
+                            _triangles.Add(_vertex_count);
+                            _triangles.Add(_vertex_count + 1);
+                            _triangles.Add(_vertex_count + 2);
+                            _triangles.Add(_vertex_count + 2);
+                            _triangles.Add(_vertex_count + 3);
+                            _triangles.Add(_vertex_count);
+
+                            _vertex_count += 4;
+                        }
+
+                    }
+                }
+            }
         }
 
-        ReconsiderFaces();
-        mesh_generated = true;
-    }
-
-    public void DisableMesh() {
-        up.SetActive(false);
-        left.SetActive(false);
-        back.SetActive(false);
-        right.SetActive(false);
-        front.SetActive(false);
-        down.SetActive(false);
-        mesh_enabled = false;
-    }
-
-    public void ReconsiderFaces() {
-        up.SetActive(World.player_coord.y >= chunk_pos.y);
-        left.SetActive(World.player_coord.z <= chunk_pos.z+32);
-        back.SetActive(World.player_coord.x <= chunk_pos.x+32);
-        right.SetActive(World.player_coord.z >= chunk_pos.z);
-        front.SetActive(World.player_coord.x >= chunk_pos.x);
-        down.SetActive(World.player_coord.y <= chunk_pos.y+32);
-        mesh_enabled = true;
-    }
-
-    static bool LocalPositionIsInChunk(Coord position) {
-        return 0 <= position.x && position.x < CHUNK_SIZE &&
-               0 <= position.z && position.z < CHUNK_SIZE &&
-               0 <= position.y && position.y < CHUNK_SIZE ;
-    }
-
-    public Global_Coord GetGlobalPosition(Coord position) {
-        return chunk_pos + position;
-    }
-
-    public BlockType GetLocalBlockType(Coord position) {
-        if (LocalPositionIsInChunk(position)) return Data.blockTypes[chunk_data[position.x, position.z, position.y]];
-        return World.GetGlobalBlockType(GetGlobalPosition(position));
     }
 }
