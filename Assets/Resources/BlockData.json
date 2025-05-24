@@ -3,56 +3,48 @@
         {
             "id": 0,
             "name": "Air",
-
             "faces": [0, 0, 0, 0, 0, 0],
             "isTransparent": true
         },
         {
             "id": 1,
             "name": "Bedrock",
-            
             "faces": [0, 0, 0, 0, 0, 0],
             "isTransparent": false
         },
         {
             "id": 2,
             "name": "Grass",
-            
             "faces": [1, 2, 2, 2, 2, 3],
             "isTransparent": false
         },
         {
             "id": 3,
             "name": "Dirt",
-            
             "faces": [3, 3, 3, 3, 3, 3],
             "isTransparent": false
         },
         {
             "id": 4,
             "name": "Stone",
-            
             "faces": [4, 4, 4, 4, 4, 4],
             "isTransparent": false
         },
         {
             "id": 5,
             "name": "Deep Stone",
-            
             "faces": [5, 5, 5, 5, 5, 5],
             "isTransparent": false
         },
         {
             "id": 6,
             "name": "Hellstone",
-            
             "faces": [6, 6, 6, 6, 6, 6],
             "isTransparent": false
         },
         {
             "id": 7,
             "name": "Sand",
-            
             "faces": [7, 7, 7, 7, 7, 7],
             "isTransparent": false
         }

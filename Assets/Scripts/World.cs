@@ -1,23 +1,33 @@
+using Unity.Mathematics;
 using UnityEngine;
 
 public class World : MonoBehaviour {
+    public static World instance = null;
 
-    public Chunk chunk { get; private set; }
-    
-    void Start() {
+    private float3 player_chunk;
+    private ChunkManager chunk_manager;
 
-        for (int x = 0; x < 4; ++x)
-        {
-            for (int z = 0; z < 4; ++z)
-            {
-                for (int y = 0; y < 2; ++y)
-                {
-                    GameObject chunk_object = new GameObject("Chunk", typeof(MeshFilter), typeof(MeshRenderer));
-                    chunk_object.transform.position = new Vector3(x*32, y*32, z*32);
-                    chunk = chunk_object.AddComponent<Chunk>();
-                }
-            }
-        }
-        
+    private Data.BlockData block_data;
+
+    // ============================================================= //
+    //                      Component Functions                      //
+    // ============================================================= //
+
+    void Awake() {
+        if (instance != null && instance != this) { Destroy(this); }
+        instance = this;
+
+        block_data = Data.LoadData();
+        chunk_manager = new ChunkManager(block_data);
     }
+
+    void OnDestroy() {
+        chunk_manager.Dispose();
+        block_data.Dispose();
+    }
+
+    // ============================================================= //
+    //                       Utility Functions                       //
+    // ============================================================= //
+
 }
