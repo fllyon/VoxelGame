@@ -4,8 +4,8 @@ using UnityEngine;
 public class World : MonoBehaviour {
     public static World instance = null;
 
-    private float3 player_chunk;
-    private ChunkManager chunk_manager;
+    public static float3 player_chunk;
+    public static ChunkManager chunk_manager;
 
     private Data.BlockData block_data;
 
@@ -19,6 +19,10 @@ public class World : MonoBehaviour {
 
         block_data = Data.LoadData();
         chunk_manager = new ChunkManager(block_data);
+    }
+
+    void Update() {
+      chunk_manager.Update();  
     }
 
     void OnDestroy() {

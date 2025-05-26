@@ -18,4 +18,23 @@ static class Utility {
         return input.x * ChunkData.CHUNK_SIZE * ChunkData.CHUNK_SIZE + input.z * ChunkData.CHUNK_SIZE + input.y;
     }
 
+    public static int3[] dirs = {
+        new int3(0, 1, 0),
+        new int3(0, 0, 1),
+        new int3(1, 0, 0),
+        new int3(0, 0, -1),
+        new int3(-1, 0, 0),
+        new int3(0, -1, 0),
+    };
+
+    public static int3[] self_dirs = {
+        new int3(0, 1, 0),
+        new int3(0, 0, 1),
+        new int3(1, 0, 0),
+        new int3(0, 0, 0),
+        new int3(0, 0, -1),
+        new int3(-1, 0, 0),
+        new int3(0, -1, 0)
+    };
+
 }
