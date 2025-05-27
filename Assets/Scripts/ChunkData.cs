@@ -27,12 +27,14 @@ public struct ChunkData {
 
     private void PopulateBlocks() {
 
-        NativeArray<int> heights = new NativeArray<int>(CHUNK_SIZE.Squared(), Allocator.Persistent);
+        NativeArray<int> heights = new NativeArray<int>(CHUNK_SIZE.Squared(), Allocator.Persistent, NativeArrayOptions.ClearMemory);
+        NativeArray<int> biomes = new NativeArray<int>(CHUNK_SIZE.Squared(), Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
         ChunkNoiseJob noise_job = new ChunkNoiseJob {
             chunk_size = CHUNK_SIZE,
             chunk_pos = position,
-            ground_heights = heights
+            ground_heights = heights,
+            biomes = biomes
         };
 
         JobHandle noise_handle = noise_job.Schedule(CHUNK_SIZE.Squared(), 32);
@@ -42,6 +44,7 @@ public struct ChunkData {
             chunk_size = CHUNK_SIZE,
             chunk_pos = position,
             ground_heights = heights,
+            biomes = biomes,
             blocks = blocks
         };
 
@@ -49,6 +52,7 @@ public struct ChunkData {
         generation_handle.Complete();
 
         heights.Dispose();
+        biomes.Dispose();
     }
 
 }

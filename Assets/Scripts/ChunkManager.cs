@@ -4,10 +4,11 @@ using Unity.Collections;
 using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
+using Priority_Queue;
 
 public class ChunkManager {
 
-    public static int MAX_CHUNKS = 512;
+    public static int MAX_CHUNKS = 4096;
     public static int WORLD_SIZE_IN_CHUNKS = 16;
 
     private Data.BlockData block_data;
@@ -16,8 +17,11 @@ public class ChunkManager {
     private NativeHashMap<int3, ChunkData> chunk_data;
     private Dictionary<int3, Chunk> chunk_components;
 
-    private NativeQueue<int3> chunks_to_generate;
-    private NativeQueue<int3> chunks_to_draw;
+    // private NativeQueue<int3> chunks_to_generate;
+    // private NativeQueue<int3> chunks_to_draw;
+
+    private FastPriorityQueue<ChunkNode> chunks_to_generate;
+    private FastPriorityQueue<ChunkNode> chunks_to_draw;
 
     public ChunkManager(Data.BlockData _block_data) {
 
@@ -26,10 +30,21 @@ public class ChunkManager {
         chunk_data = new NativeHashMap<int3, ChunkData>(MAX_CHUNKS, Allocator.Persistent);
         chunk_components = new Dictionary<int3, Chunk>(MAX_CHUNKS);
 
-        chunks_to_generate = new NativeQueue<int3>(Allocator.Persistent);
-        chunks_to_draw = new NativeQueue<int3>(Allocator.Persistent);
+        // chunks_to_generate = new NativeQueue<int3>(Allocator.Persistent);
+        // chunks_to_draw = new NativeQueue<int3>(Allocator.Persistent);
+        chunks_to_generate = new FastPriorityQueue<ChunkNode>(MAX_CHUNKS);
+        chunks_to_draw = new FastPriorityQueue<ChunkNode>(MAX_CHUNKS);
 
         Initialize();
+    }
+
+    // ============================================================= //
+    //                       Utility Datatypes                       //
+    // ============================================================= //
+
+    public class ChunkNode : FastPriorityQueueNode {
+        public int3 coord;
+        public ChunkNode(int3 coord_in) { coord = coord_in; }
     }
 
     // ============================================================= //
@@ -63,15 +78,15 @@ public class ChunkManager {
                     chunks.Add(_chunk_coord);
                     chunk_components.Add(_chunk_coord, _chunk_component);
 
-                    chunks_to_generate.Enqueue(_chunk_coord);
+                    chunks_to_generate.Enqueue(new ChunkNode(_chunk_coord), Player.ChunkDistanceFromPlayer(_chunk_coord));
                 }
             }
         }
     }
 
     public void Update() {
-        if (chunks_to_generate.Count != 0) { GenerateChunk(chunks_to_generate.Dequeue()); }
-        if (chunks_to_draw.Count != 0) { DrawChunk(chunks_to_draw.Dequeue()); }
+        if (chunks_to_generate.Count != 0) { GenerateChunk(chunks_to_generate.Dequeue().coord); }
+        if (chunks_to_draw.Count != 0) { DrawChunk(chunks_to_draw.Dequeue().coord); }
     }
 
     private void GenerateChunk(int3 _chunk_coord) {
@@ -81,7 +96,7 @@ public class ChunkManager {
         foreach (int3 dir in Utility.self_dirs) {
             int3 _nbr_coord = _chunk_coord + dir;
             if (!chunk_data.ContainsKey(_nbr_coord)) { continue; }
-            if (GetNeighbors(_nbr_coord) == 6) { chunks_to_draw.Enqueue(_nbr_coord); }
+            if (GetNeighbors(_nbr_coord) == 6) { chunks_to_draw.Enqueue(new ChunkNode(_nbr_coord), Player.ChunkDistanceFromPlayer(_nbr_coord)); }
         }
     }
 
@@ -174,17 +189,11 @@ public class ChunkManager {
     }
 
     public byte GetBlock(int3 coord) {
-        int3 chunk_coord = GetChunkCoord(coord);
+        int3 chunk_coord = Utility.GetChunkCoord(coord);
         int3 block_coord = coord - (chunk_coord * ChunkData.CHUNK_SIZE);
         if (!chunk_data.ContainsKey(chunk_coord)) { return 0; }
         byte val = chunk_data[chunk_coord].blocks[block_coord.Flatten()];
         return val;
-    }
-
-    public int3 GetChunkCoord(int3 coord) {
-        return new int3((int)math.floor(coord.x / (float)ChunkData.CHUNK_SIZE),
-                        (int)math.floor(coord.y / (float)ChunkData.CHUNK_SIZE),
-                        (int)math.floor(coord.z / (float)ChunkData.CHUNK_SIZE));
     }
 
     public bool ChunkInWorld(int3 coord) {
@@ -212,7 +221,7 @@ public class ChunkManager {
         if (chunks.IsCreated) { chunks.Dispose(); }
         if (chunk_data.IsCreated) { chunk_data.Dispose(); }
 
-        if (chunks_to_generate.IsCreated) { chunks_to_generate.Dispose(); }
-        if (chunks_to_draw.IsCreated) { chunks_to_draw.Dispose(); }
+        // if (chunks_to_generate.IsCreated) { chunks_to_generate.Dispose(); }
+        // if (chunks_to_draw.IsCreated) { chunks_to_draw.Dispose(); }
     }
 }

@@ -8,6 +8,10 @@ static class Utility {
         return new Vector3(input.x, input.y, input.z);
     }
 
+    public static int3 Int3(this Vector3 input) {
+        return new int3((int)input.x, (int)input.y, (int)input.z);
+    }
+
     [BurstCompile]
     public static int Squared(this int input) {
         return input * input;
@@ -34,6 +38,13 @@ static class Utility {
         int z = (input >> 5) & 0x1F;
         int x = (input >> 10) & 0x1F;
         return new int3(x, y, z);
+    }
+
+    [BurstCompile]
+    public static int3 GetChunkCoord(int3 coord) {
+        return new int3((int)math.floor(coord.x / (float)ChunkData.CHUNK_SIZE),
+                        (int)math.floor(coord.y / (float)ChunkData.CHUNK_SIZE),
+                        (int)math.floor(coord.z / (float)ChunkData.CHUNK_SIZE));
     }
 
     public static int3[] dirs = {
