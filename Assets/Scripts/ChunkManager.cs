@@ -8,7 +8,7 @@ using UnityEngine;
 public class ChunkManager {
 
     public static int MAX_CHUNKS = 512;
-    public static int WORLD_SIZE_IN_CHUNKS = 8;
+    public static int WORLD_SIZE_IN_CHUNKS = 16;
 
     private Data.BlockData block_data;
 

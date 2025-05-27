@@ -9,13 +9,31 @@ static class Utility {
     }
 
     [BurstCompile]
+    public static int Squared(this int input) {
+        return input * input;
+    }
+
+    [BurstCompile]
     public static int Cubed(this int input) {
         return input * input * input;
     }
 
     [BurstCompile]
     public static int Flatten(this int3 input) {
-        return input.x * ChunkData.CHUNK_SIZE * ChunkData.CHUNK_SIZE + input.z * ChunkData.CHUNK_SIZE + input.y;
+        return (input.x << 10) + (input.z << 5) + input.y;
+    }
+
+    [BurstCompile]
+    public static int Flatten(this int2 input) {
+        return (input.x << 5) + input.y;
+    }
+
+    [BurstCompile]
+    public static int3 Unflatten(this int input) {
+        int y = input & 0x1F;
+        int z = (input >> 5) & 0x1F;
+        int x = (input >> 10) & 0x1F;
+        return new int3(x, y, z);
     }
 
     public static int3[] dirs = {
