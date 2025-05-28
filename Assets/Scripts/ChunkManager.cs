@@ -5,20 +5,19 @@ using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
 using Priority_Queue;
+using Unity.Jobs;
 
 public class ChunkManager {
 
     public static int MAX_CHUNKS = 4096;
     public static int WORLD_SIZE_IN_CHUNKS = 16;
+    public static int WORLD_HEIGHT_IN_CHUNKS = 16;
 
     private Data.BlockData block_data;
 
     private NativeHashSet<int3> chunks;
     private NativeHashMap<int3, ChunkData> chunk_data;
     private Dictionary<int3, Chunk> chunk_components;
-
-    // private NativeQueue<int3> chunks_to_generate;
-    // private NativeQueue<int3> chunks_to_draw;
 
     private FastPriorityQueue<ChunkNode> chunks_to_generate;
     private FastPriorityQueue<ChunkNode> chunks_to_draw;
@@ -30,8 +29,6 @@ public class ChunkManager {
         chunk_data = new NativeHashMap<int3, ChunkData>(MAX_CHUNKS, Allocator.Persistent);
         chunk_components = new Dictionary<int3, Chunk>(MAX_CHUNKS);
 
-        // chunks_to_generate = new NativeQueue<int3>(Allocator.Persistent);
-        // chunks_to_draw = new NativeQueue<int3>(Allocator.Persistent);
         chunks_to_generate = new FastPriorityQueue<ChunkNode>(MAX_CHUNKS);
         chunks_to_draw = new FastPriorityQueue<ChunkNode>(MAX_CHUNKS);
 
@@ -58,7 +55,7 @@ public class ChunkManager {
         // Create the chunk and generate it
         for (int x = 0; x < WORLD_SIZE_IN_CHUNKS; ++x) {
             for (int z = 0; z < WORLD_SIZE_IN_CHUNKS; ++z) {
-                for (int y = 0; y < WORLD_SIZE_IN_CHUNKS; ++y) {
+                for (int y = 0; y < WORLD_HEIGHT_IN_CHUNKS; ++y) {
 
                     int3 _chunk_coord = new int3(x, y, z);
 
@@ -74,10 +71,8 @@ public class ChunkManager {
                     _chunk_component = _chunk_object.AddComponent<Chunk>();
                     _chunk_object.GetOrAddComponent<MeshRenderer>().material = Resources.Load<Material>("BlockTextures");
 
-                    // Update hash set + maps with new data
                     chunks.Add(_chunk_coord);
                     chunk_components.Add(_chunk_coord, _chunk_component);
-
                     chunks_to_generate.Enqueue(new ChunkNode(_chunk_coord), Player.ChunkDistanceFromPlayer(_chunk_coord));
                 }
             }
@@ -101,6 +96,62 @@ public class ChunkManager {
     }
 
     private void DrawChunk(int3 _chunk_coord) {
+
+        // ==================== //
+        //     MESH JOB WIP     //
+        // ==================== //
+
+        // int blocks_per_chunk = ChunkData.CHUNK_SIZE.Cubed();
+        // NativeArray<byte> neighbor_blocks = new NativeArray<byte>(blocks_per_chunk * 6, Allocator.Persistent);
+        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[0]].blocks, 0, neighbor_blocks, 0,                    blocks_per_chunk);
+        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[1]].blocks, 0, neighbor_blocks, blocks_per_chunk * 1, blocks_per_chunk);
+        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[2]].blocks, 0, neighbor_blocks, blocks_per_chunk * 2, blocks_per_chunk);
+        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[3]].blocks, 0, neighbor_blocks, blocks_per_chunk * 3, blocks_per_chunk);
+        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[4]].blocks, 0, neighbor_blocks, blocks_per_chunk * 4, blocks_per_chunk);
+        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[5]].blocks, 0, neighbor_blocks, blocks_per_chunk * 5, blocks_per_chunk);
+
+        // NativeList<float3> vertices = new NativeList<float3>(131072, Allocator.Persistent); // A little higher than  value internet said was "average"
+        // NativeList<float3> normals = new NativeList<float3>(131072, Allocator.Persistent);
+        // NativeList<float2> uvs = new NativeList<float2>(131072, Allocator.Persistent);
+        // NativeList<int> triangles = new NativeList<int>(196608, Allocator.Persistent);
+
+        // ChunkDrawJob draw_job = new ChunkDrawJob {
+        //     chunk_size = ChunkData.CHUNK_SIZE,
+        //     blocks = chunk_data[_chunk_coord].blocks,
+        //     nbr_blocks = neighbor_blocks,
+        //     face_data = block_data.face_data,
+        //     vertices = vertices,
+        //     normals = normals,
+        //     uvs = uvs,
+        //     triangles = triangles
+        // };
+
+        // JobHandle draw_handle = draw_job.Schedule();
+        // draw_handle.Complete();
+
+        // Vector3[] _vertices = new Vector3[vertices.Length];
+        // Vector3[] _normals = new Vector3[normals.Length];
+        // Vector2[] _uvs = new Vector2[uvs.Length];
+        // int[] _triangles = new int[triangles.Length];
+
+        // for (int idx = 0; idx < vertices.Length; ++idx) { _vertices[idx] = vertices[idx]; }
+        // for (int idx = 0; idx < normals.Length; ++idx) { _normals[idx] = normals[idx]; }
+        // for (int idx = 0; idx < uvs.Length; ++idx) { _uvs[idx] = uvs[idx]; }
+        // for (int idx = 0; idx < triangles.Length; ++idx) { _triangles[idx] = triangles[idx]; }
+
+        // Mesh mesh = new Mesh();
+        // mesh.vertices = _vertices;
+        // mesh.normals = _normals;
+        // mesh.uv = _uvs;
+        // mesh.triangles = _triangles;
+
+        // chunk_components[_chunk_coord].mesh_filter.mesh = mesh;
+
+        // neighbor_blocks.Dispose();
+        // vertices.Dispose();
+        // normals.Dispose();
+        // uvs.Dispose();
+        // triangles.Dispose();
 
         ChunkData _chunk_data = chunk_data[_chunk_coord];
 
@@ -198,7 +249,7 @@ public class ChunkManager {
 
     public bool ChunkInWorld(int3 coord) {
         return 0 <= coord.x && coord.x < WORLD_SIZE_IN_CHUNKS &&
-               0 <= coord.y && coord.y < WORLD_SIZE_IN_CHUNKS &&
+               0 <= coord.y && coord.y < WORLD_HEIGHT_IN_CHUNKS &&
                0 <= coord.z && coord.z < WORLD_SIZE_IN_CHUNKS;
     }
 
@@ -220,8 +271,5 @@ public class ChunkManager {
 
         if (chunks.IsCreated) { chunks.Dispose(); }
         if (chunk_data.IsCreated) { chunk_data.Dispose(); }
-
-        // if (chunks_to_generate.IsCreated) { chunks_to_generate.Dispose(); }
-        // if (chunks_to_draw.IsCreated) { chunks_to_draw.Dispose(); }
     }
 }

@@ -1,3 +1,4 @@
+using System.Numerics;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
@@ -19,7 +20,7 @@ public struct ChunkNoiseJob : IJobParallelFor {
         int z = chunk_pos.z + block_z;
 
         float forest = WorldGen.GetForestWeight(x, z);
-        float desert = WorldGen.GetForestWeight(x, z);
+        float desert = WorldGen.GetDesertWeight(x, z);
         float diff = math.abs(forest - desert);
 
         if (diff < 0.05f) {
@@ -66,11 +67,107 @@ public struct ChunkGenerateJob : IJobParallelFor {
 
         int3 block_pos = idx.Unflatten();
         int block_height = chunk_pos.y + block_pos.y;
+        if (block_height == 0) { blocks[idx] = 1; return; }
+
         int ground_height = ground_heights[block_pos.z * chunk_size + block_pos.x];
         int biomes_idx = block_pos.z * chunk_size + block_pos.x;
 
-        if (block_height < ground_height) { blocks[idx] = (biomes[biomes_idx] == 0) ? (byte)3 : (byte)4; }
-        else if (block_height == ground_height) { blocks[idx] = (biomes[biomes_idx] == 0) ? (byte)2 : (byte)4; }
+        if (block_height < (ground_height >> 2)) { blocks[idx] = 6; }
+        else if (block_height < (ground_height >> 1)) { blocks[idx] = 5; }
+        else if (block_height < ground_height - 6) { blocks[idx] = 4; }
+        else if (block_height < ground_height) { blocks[idx] = (biomes[biomes_idx] == 0) ? (byte)3 : (byte)7; }
+        else if (block_height == ground_height) { blocks[idx] = (biomes[biomes_idx] == 0) ? (byte)2 : (byte)7; }
+
+    }
+
+}
+
+[BurstCompile]
+public struct ChunkDrawJob : IJob {
+
+    [ReadOnly] public int chunk_size;
+    [ReadOnly] public NativeArray<byte> blocks;
+    [ReadOnly] public NativeArray<byte> nbr_blocks;
+    [ReadOnly] public NativeArray<int> face_data;
+    public NativeList<float3> vertices; // Initialize to size 32,768
+    public NativeList<float3> normals;
+    public NativeList<float2> uvs;
+    public NativeList<int> triangles;
+
+    public void Execute() {
+
+        int vertex_count = 0;
+
+        int3[] _directions = {
+            new int3(0, 1, 0), new int3(0, 0, 1), new int3(1, 0, 0), new int3(0, 0, -1), new int3(-1, 0, 0), new int3(0, -1, 0)
+        };
+
+        int3[][] _verts = {
+            new int3[] { new int3(0, 1, 0), new int3(0, 1, 1), new int3(1, 1, 1), new int3(1, 1, 0) },
+            new int3[] { new int3(0, 0, 1), new int3(1, 0, 1), new int3(1, 1, 1), new int3(0, 1, 1) },
+            new int3[] { new int3(1, 0, 1), new int3(1, 0, 0), new int3(1, 1, 0), new int3(1, 1, 1) },
+            new int3[] { new int3(1, 0, 0), new int3(0, 0, 0), new int3(0, 1, 0), new int3(1, 1, 0) },
+            new int3[] { new int3(0, 0, 0), new int3(0, 0, 1), new int3(0, 1, 1), new int3(0, 1, 0) },
+            new int3[] { new int3(0, 0, 0), new int3(1, 0, 0), new int3(1, 0, 1), new int3(0, 0, 1) }
+        };
+
+        int3[] norms = {
+            new int3(0, 1, 0), new int3(0, 0, 1), new int3(1, 0, 0), new int3(0, 0, -1), new int3(-1, 0, 0), new int3(0, -1, 0)
+        };
+
+        int blocks_per_chunk = chunk_size.Cubed();
+
+        int idx = 0;
+        for (int x = 0; x < chunk_size; ++x) {
+            for (int z = 0; z < chunk_size; ++z) {
+                for (int y = 0; y < chunk_size; ++y) {
+                    
+                    byte _block_type = blocks[idx++];
+                    if (_block_type == 0) { continue; }
+
+                    int3 _block_pos = new int3(x, y, z);
+                    for (int face = 0; face < 6; ++face) {
+                        
+                        int3 _nbr_pos = _block_pos + _directions[face];
+                        byte nbr_type = (0 <= _nbr_pos.x && _nbr_pos.x < 32 &&
+                                         0 <= _nbr_pos.y && _nbr_pos.y < 32 &&
+                                         0 <= _nbr_pos.z && _nbr_pos.z < 32)
+                                            ? blocks[_nbr_pos.Flatten()]
+                                            : nbr_blocks[face * blocks_per_chunk + _nbr_pos.Flatten()];
+
+                        if (nbr_type != 0) { continue; }
+
+                        vertices.Add(_block_pos + _verts[face][0]);
+                        vertices.Add(_block_pos + _verts[face][1]);
+                        vertices.Add(_block_pos + _verts[face][2]);
+                        vertices.Add(_block_pos + _verts[face][3]);
+
+                        normals.Add(norms[face]);
+                        normals.Add(norms[face]);
+                        normals.Add(norms[face]);
+                        normals.Add(norms[face]);
+
+                        int texture_idx = face_data[_block_type * 6 + face];
+                        float2 base_uv = new float2(0.0625f * (texture_idx % 16), 1.0f - (texture_idx / 16) - 0.0625f);
+
+                        uvs.Add(base_uv);
+                        uvs.Add(base_uv + new float2(0.0625f, 0));
+                        uvs.Add(base_uv + new float2(0.0625f, 0.0625f));
+                        uvs.Add(base_uv + new float2(0, 0.0625f));
+
+                        triangles.Add(vertex_count);
+                        triangles.Add(vertex_count + 1);
+                        triangles.Add(vertex_count + 2);
+                        triangles.Add(vertex_count + 2);
+                        triangles.Add(vertex_count + 3);
+                        triangles.Add(vertex_count);
+
+                        vertex_count += 4;
+                    }
+
+                }
+            }
+        }
 
     }
 

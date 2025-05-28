@@ -3,6 +3,39 @@ using Unity.Mathematics;
 
 public static class WorldGen {
 
+    public static int GetBlendedTerrainHeight(int x, int z) {
+
+        float forest = GetForestWeight(x, z);
+        float desert = GetDesertWeight(x, z);
+        float diff = math.abs(forest - desert);
+
+        if (diff < 0.05f) {
+
+            diff *= 10;
+            float upper = 0.5f + diff;
+            float lower = 0.5f - diff;
+            upper *= upper *= upper;
+            lower *= lower *= lower;
+
+            if (desert > forest) { 
+                desert = upper / (upper + lower);
+                forest = lower / (upper + lower);
+            } else {
+                forest = upper / (upper + lower);
+                desert = lower / (upper + lower);
+            }
+
+            int forest_surface = GetSurfaceHeight(x, z);
+            int desert_surface = GetDesertSurfaceHeight(x, z);
+
+            return (int)(forest_surface * forest + desert_surface * desert);
+        } else if (desert > forest) { 
+            return GetDesertSurfaceHeight(x, z); 
+        } else { 
+            return GetSurfaceHeight(x, z);
+        }
+    }
+
     // ============================================================= //
     //                        Forest Functions                       //
     // ============================================================= //
@@ -11,9 +44,9 @@ public static class WorldGen {
     const float forest_scale = 0.0025f;
 
     [BurstCompile]
-    public static float GetForestWeight(int x, int y) {
-        return noise.snoise(new float2((x + forest_offset - 0.1f) * forest_scale, 
-                                       (y + forest_offset - 0.1f) * forest_scale));
+    public static float GetForestWeight(int x, int z) {
+        return noise.cnoise(new float2((x + forest_offset - 0.1f) * forest_scale, 
+                                       (z + forest_offset - 0.1f) * forest_scale));
     }
 
     const int surface_base = 416;
@@ -22,21 +55,21 @@ public static class WorldGen {
 
     [BurstCompile]
     public static int GetSurfaceHeight(int x, int z) {
-        return (int)(noise.snoise(new float2((x + 0.1f) * surface_scale,
+        return (int)(noise.cnoise(new float2((x + 0.1f) * surface_scale,
                                              (z + 0.1f) * surface_scale)) * surface_variance + surface_base);
     }
 
     // ============================================================= //
-    //                        Desert Functions                       //
+    //                        Ocean Functions                        //
     // ============================================================= //
 
     const int desert_offset = 8008135;
     const float desert_scale = 0.0025f;
 
     [BurstCompile]
-    public static float GetDesertWeight(int x, int y) {
-        return noise.snoise(new float2((x + desert_offset - 0.1f) * desert_scale, 
-                                       (y + desert_offset - 0.1f) * desert_scale));
+    public static float GetDesertWeight(int x, int z) {
+        return noise.cnoise(new float2((x + desert_offset - 0.1f) * desert_scale, 
+                                       (z + desert_offset - 0.1f) * desert_scale));
     }
 
     const int desert_surface_base = 368;
@@ -45,7 +78,7 @@ public static class WorldGen {
 
     [BurstCompile]
     public static int GetDesertSurfaceHeight(int x, int z) {
-        return (int)(noise.snoise(new float2((x - 0.1f) * desert_surface_scale, 
+        return (int)(noise.cnoise(new float2((x - 0.1f) * desert_surface_scale, 
                                              (z - 0.1f) * desert_surface_scale)) * desert_surface_variance + desert_surface_base);
     }
 
