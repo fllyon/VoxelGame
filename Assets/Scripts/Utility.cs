@@ -28,6 +28,13 @@ static class Utility {
     }
 
     [BurstCompile]
+    public static int3 GetLocalPos(this int3 input) {
+        return new int3((input.x % 32 + 32) % 32, 
+                        (input.y % 32 + 32) % 32, 
+                        (input.z % 32 + 32) % 32);
+    }
+
+    [BurstCompile]
     public static int Flatten(this int2 input) {
         return (input.x << 5) + input.y;
     }

@@ -6,6 +6,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using Priority_Queue;
 using Unity.Jobs;
+using System.Diagnostics;
 
 public class ChunkManager {
 
@@ -97,146 +98,57 @@ public class ChunkManager {
 
     private void DrawChunk(int3 _chunk_coord) {
 
-        // ==================== //
-        //     MESH JOB WIP     //
-        // ==================== //
+        int blocks_per_chunk = ChunkData.CHUNK_SIZE.Cubed();
+        NativeArray<byte> neighbor_blocks = new NativeArray<byte>(blocks_per_chunk * 6, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+        if (_chunk_coord.y != WORLD_HEIGHT_IN_CHUNKS - 1) { NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[0]].blocks, 0, neighbor_blocks, 0, blocks_per_chunk); }
+        if (_chunk_coord.z != WORLD_SIZE_IN_CHUNKS - 1) { NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[1]].blocks, 0, neighbor_blocks, blocks_per_chunk * 1, blocks_per_chunk); }
+        if (_chunk_coord.x != WORLD_SIZE_IN_CHUNKS - 1) { NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[2]].blocks, 0, neighbor_blocks, blocks_per_chunk * 2, blocks_per_chunk); }
+        if (_chunk_coord.z != 0) { NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[3]].blocks, 0, neighbor_blocks, blocks_per_chunk * 3, blocks_per_chunk); }
+        if (_chunk_coord.x != 0) { NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[4]].blocks, 0, neighbor_blocks, blocks_per_chunk * 4, blocks_per_chunk); }
+        if (_chunk_coord.y != 0) { NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[5]].blocks, 0, neighbor_blocks, blocks_per_chunk * 5, blocks_per_chunk); }
 
-        // int blocks_per_chunk = ChunkData.CHUNK_SIZE.Cubed();
-        // NativeArray<byte> neighbor_blocks = new NativeArray<byte>(blocks_per_chunk * 6, Allocator.Persistent);
-        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[0]].blocks, 0, neighbor_blocks, 0,                    blocks_per_chunk);
-        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[1]].blocks, 0, neighbor_blocks, blocks_per_chunk * 1, blocks_per_chunk);
-        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[2]].blocks, 0, neighbor_blocks, blocks_per_chunk * 2, blocks_per_chunk);
-        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[3]].blocks, 0, neighbor_blocks, blocks_per_chunk * 3, blocks_per_chunk);
-        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[4]].blocks, 0, neighbor_blocks, blocks_per_chunk * 4, blocks_per_chunk);
-        // NativeArray<byte>.Copy(chunk_data[_chunk_coord + Utility.dirs[5]].blocks, 0, neighbor_blocks, blocks_per_chunk * 5, blocks_per_chunk);
+        NativeList<float3> vertices = new NativeList<float3>(ChunkData.CHUNK_SIZE.Cubed() * 4, Allocator.Persistent);
+        NativeList<float3> normals = new NativeList<float3>(ChunkData.CHUNK_SIZE.Cubed() * 4, Allocator.Persistent);
+        NativeList<float2> uvs = new NativeList<float2>(ChunkData.CHUNK_SIZE.Cubed() * 4, Allocator.Persistent);
+        NativeList<int> triangles = new NativeList<int>(ChunkData.CHUNK_SIZE.Cubed() * 6, Allocator.Persistent);
 
-        // NativeList<float3> vertices = new NativeList<float3>(131072, Allocator.Persistent); // A little higher than  value internet said was "average"
-        // NativeList<float3> normals = new NativeList<float3>(131072, Allocator.Persistent);
-        // NativeList<float2> uvs = new NativeList<float2>(131072, Allocator.Persistent);
-        // NativeList<int> triangles = new NativeList<int>(196608, Allocator.Persistent);
-
-        // ChunkDrawJob draw_job = new ChunkDrawJob {
-        //     chunk_size = ChunkData.CHUNK_SIZE,
-        //     blocks = chunk_data[_chunk_coord].blocks,
-        //     nbr_blocks = neighbor_blocks,
-        //     face_data = block_data.face_data,
-        //     vertices = vertices,
-        //     normals = normals,
-        //     uvs = uvs,
-        //     triangles = triangles
-        // };
-
-        // JobHandle draw_handle = draw_job.Schedule();
-        // draw_handle.Complete();
-
-        // Vector3[] _vertices = new Vector3[vertices.Length];
-        // Vector3[] _normals = new Vector3[normals.Length];
-        // Vector2[] _uvs = new Vector2[uvs.Length];
-        // int[] _triangles = new int[triangles.Length];
-
-        // for (int idx = 0; idx < vertices.Length; ++idx) { _vertices[idx] = vertices[idx]; }
-        // for (int idx = 0; idx < normals.Length; ++idx) { _normals[idx] = normals[idx]; }
-        // for (int idx = 0; idx < uvs.Length; ++idx) { _uvs[idx] = uvs[idx]; }
-        // for (int idx = 0; idx < triangles.Length; ++idx) { _triangles[idx] = triangles[idx]; }
-
-        // Mesh mesh = new Mesh();
-        // mesh.vertices = _vertices;
-        // mesh.normals = _normals;
-        // mesh.uv = _uvs;
-        // mesh.triangles = _triangles;
-
-        // chunk_components[_chunk_coord].mesh_filter.mesh = mesh;
-
-        // neighbor_blocks.Dispose();
-        // vertices.Dispose();
-        // normals.Dispose();
-        // uvs.Dispose();
-        // triangles.Dispose();
-
-        ChunkData _chunk_data = chunk_data[_chunk_coord];
-
-        int _vertex_count = 0;
-        List<Vector3> _vertices = new List<Vector3>();
-        List<Vector3> _normals = new List<Vector3>();
-        List<Vector2> _uvs = new List<Vector2>();
-        List<int> _triangles = new List<int>();
-
-        int3[] _directions = {
-            new int3(0, 1, 0), new int3(0, 0, 1), new int3(1, 0, 0), new int3(0, 0, -1), new int3(-1, 0, 0), new int3(0, -1, 0)
+        ChunkDrawJob draw_job = new ChunkDrawJob {
+            chunk_size = ChunkData.CHUNK_SIZE,
+            blocks = chunk_data[_chunk_coord].blocks,
+            nbr_blocks = neighbor_blocks,
+            face_data = block_data.face_data,
+            vertices = vertices,
+            normals = normals,
+            uvs = uvs,
+            triangles = triangles
         };
 
-        Vector3[][] _verts = {
-            new Vector3[] { new Vector3(0, 1, 0), new Vector3(0, 1, 1), new Vector3(1, 1, 1), new Vector3(1, 1, 0) },
-            new Vector3[] { new Vector3(0, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 1, 1), new Vector3(0, 1, 1) },
-            new Vector3[] { new Vector3(1, 0, 1), new Vector3(1, 0, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 1) },
-            new Vector3[] { new Vector3(1, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0) },
-            new Vector3[] { new Vector3(0, 0, 0), new Vector3(0, 0, 1), new Vector3(0, 1, 1), new Vector3(0, 1, 0) },
-            new Vector3[] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 0, 1), new Vector3(0, 0, 1) }
-        };
+        JobHandle draw_handle = draw_job.Schedule();
+        draw_handle.Complete();
 
-        Vector3[] norms = {
-            new Vector3(0, 1, 0), new Vector3(0, 0, 1), new Vector3(1, 0, 0), new Vector3(0, 0, -1), new Vector3(-1, 0, 0), new Vector3(0, -1, 0)
-        };
+        Vector3[] _vertices = new Vector3[vertices.Length];
+        Vector3[] _normals = new Vector3[normals.Length];
+        Vector2[] _uvs = new Vector2[uvs.Length];
+        int[] _triangles = new int[triangles.Length];
 
-        for (int xx = 0; xx < ChunkData.CHUNK_SIZE; ++xx) {
-            for (int zz = 0; zz < ChunkData.CHUNK_SIZE; ++zz) {
-                for (int yy = 0; yy < ChunkData.CHUNK_SIZE; ++yy) {
-                    
-                    int3 _block_pos = new int3(xx, yy, zz);
-                    byte _block_type = _chunk_data.blocks[_block_pos.Flatten()];
-                    if (_block_type == 0) { continue; }
-
-                    for (int face = 0; face < 6; ++face) {
-                        
-                        int3 _nbr_pos = _block_pos + _directions[face];
-                        byte nbr_type = (0 <= _nbr_pos.x && _nbr_pos.x < 32 &&
-                                         0 <= _nbr_pos.y && _nbr_pos.y < 32 &&
-                                         0 <= _nbr_pos.z && _nbr_pos.z < 32)
-                                            ? _chunk_data.blocks[_nbr_pos.Flatten()]
-                                            : GetBlock(_nbr_pos + _chunk_coord * ChunkData.CHUNK_SIZE);
-
-                        if (nbr_type != 0) { continue; }
-
-                        Vector3 pos = _block_pos.Vector3();
-                        _vertices.Add(pos + _verts[face][0]);
-                        _vertices.Add(pos + _verts[face][1]);
-                        _vertices.Add(pos + _verts[face][2]);
-                        _vertices.Add(pos + _verts[face][3]);
-
-                        _normals.Add(norms[face]);
-                        _normals.Add(norms[face]);
-                        _normals.Add(norms[face]);
-                        _normals.Add(norms[face]);
-
-                        int texture_idx = block_data.face_data[_block_type * 6 + face];
-                        Vector2 base_uv = new Vector2(0.0625f * (texture_idx % 16), 1.0f - (texture_idx / 16) - 0.0625f);
-
-                        _uvs.Add(base_uv);
-                        _uvs.Add(base_uv + new Vector2(0.0625f, 0));
-                        _uvs.Add(base_uv + new Vector2(0.0625f, 0.0625f));
-                        _uvs.Add(base_uv + new Vector2(0, 0.0625f));
-
-                        _triangles.Add(_vertex_count);
-                        _triangles.Add(_vertex_count + 1);
-                        _triangles.Add(_vertex_count + 2);
-                        _triangles.Add(_vertex_count + 2);
-                        _triangles.Add(_vertex_count + 3);
-                        _triangles.Add(_vertex_count);
-
-                        _vertex_count += 4;
-                    }
-
-                }
-            }
-        }
+        for (int idx = 0; idx < vertices.Length; ++idx) { _vertices[idx] = vertices[idx]; }
+        for (int idx = 0; idx < normals.Length; ++idx) { _normals[idx] = normals[idx]; }
+        for (int idx = 0; idx < uvs.Length; ++idx) { _uvs[idx] = uvs[idx]; }
+        for (int idx = 0; idx < triangles.Length; ++idx) { _triangles[idx] = triangles[idx]; }
 
         Mesh mesh = new Mesh();
-        mesh.vertices = _vertices.ToArray();
-        mesh.normals = _normals.ToArray();
-        mesh.uv = _uvs.ToArray();
-        mesh.triangles = _triangles.ToArray();
-
+        mesh.vertices = _vertices;
+        mesh.normals = _normals;
+        mesh.uv = _uvs;
+        mesh.triangles = _triangles;
         chunk_components[_chunk_coord].mesh_filter.mesh = mesh;
+        mesh.RecalculateBounds();
+
+        neighbor_blocks.Dispose();
+        vertices.Dispose();
+        normals.Dispose();
+        uvs.Dispose();
+        triangles.Dispose();
     }
 
     public byte GetBlock(int3 coord) {

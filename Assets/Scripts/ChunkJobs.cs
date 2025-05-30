@@ -98,22 +98,21 @@ public struct ChunkDrawJob : IJob {
 
         int vertex_count = 0;
 
-        int3[] _directions = {
-            new int3(0, 1, 0), new int3(0, 0, 1), new int3(1, 0, 0), new int3(0, 0, -1), new int3(-1, 0, 0), new int3(0, -1, 0)
-        };
+        NativeArray<int3> dirs = new NativeArray<int3>(6, Allocator.Temp);
+        dirs[0] = new int3(0, 1, 0);
+        dirs[1] = new int3(0, 0, 1);
+        dirs[2] = new int3(1, 0, 0);
+        dirs[3] = new int3(0, 0, -1);
+        dirs[4] = new int3(-1, 0, 0);
+        dirs[5] = new int3(0, -1, 0);
 
-        int3[][] _verts = {
-            new int3[] { new int3(0, 1, 0), new int3(0, 1, 1), new int3(1, 1, 1), new int3(1, 1, 0) },
-            new int3[] { new int3(0, 0, 1), new int3(1, 0, 1), new int3(1, 1, 1), new int3(0, 1, 1) },
-            new int3[] { new int3(1, 0, 1), new int3(1, 0, 0), new int3(1, 1, 0), new int3(1, 1, 1) },
-            new int3[] { new int3(1, 0, 0), new int3(0, 0, 0), new int3(0, 1, 0), new int3(1, 1, 0) },
-            new int3[] { new int3(0, 0, 0), new int3(0, 0, 1), new int3(0, 1, 1), new int3(0, 1, 0) },
-            new int3[] { new int3(0, 0, 0), new int3(1, 0, 0), new int3(1, 0, 1), new int3(0, 0, 1) }
-        };
-
-        int3[] norms = {
-            new int3(0, 1, 0), new int3(0, 0, 1), new int3(1, 0, 0), new int3(0, 0, -1), new int3(-1, 0, 0), new int3(0, -1, 0)
-        };
+        NativeArray<int3> verts = new NativeArray<int3>(24, Allocator.Temp);
+        verts[0] = new int3(0, 1, 0); verts[1] = new int3(0, 1, 1); verts[2] = new int3(1, 1, 1); verts[3] = new int3(1, 1, 0);
+        verts[4] = new int3(0, 0, 1); verts[5] = new int3(1, 0, 1); verts[6] = new int3(1, 1, 1); verts[7] = new int3(0, 1, 1);
+        verts[8] = new int3(1, 0, 1); verts[9] = new int3(1, 0, 0); verts[10] = new int3(1, 1, 0); verts[11] = new int3(1, 1, 1);
+        verts[12] = new int3(1, 0, 0); verts[13] = new int3(0, 0, 0); verts[14] = new int3(0, 1, 0); verts[15] = new int3(1, 1, 0);
+        verts[16] = new int3(0, 0, 0); verts[17] = new int3(0, 0, 1); verts[18] = new int3(0, 1, 1); verts[19] = new int3(0, 1, 0);
+        verts[20] = new int3(0, 0, 0); verts[21] = new int3(1, 0, 0); verts[22] = new int3(1, 0, 1); verts[23] = new int3(0, 0, 1);
 
         int blocks_per_chunk = chunk_size.Cubed();
 
@@ -128,24 +127,24 @@ public struct ChunkDrawJob : IJob {
                     int3 _block_pos = new int3(x, y, z);
                     for (int face = 0; face < 6; ++face) {
                         
-                        int3 _nbr_pos = _block_pos + _directions[face];
+                        int3 _nbr_pos = _block_pos + dirs[face];
                         byte nbr_type = (0 <= _nbr_pos.x && _nbr_pos.x < 32 &&
                                          0 <= _nbr_pos.y && _nbr_pos.y < 32 &&
                                          0 <= _nbr_pos.z && _nbr_pos.z < 32)
                                             ? blocks[_nbr_pos.Flatten()]
-                                            : nbr_blocks[face * blocks_per_chunk + _nbr_pos.Flatten()];
+                                            : nbr_blocks[face * blocks_per_chunk + _nbr_pos.GetLocalPos().Flatten()];
 
                         if (nbr_type != 0) { continue; }
 
-                        vertices.Add(_block_pos + _verts[face][0]);
-                        vertices.Add(_block_pos + _verts[face][1]);
-                        vertices.Add(_block_pos + _verts[face][2]);
-                        vertices.Add(_block_pos + _verts[face][3]);
+                        vertices.Add(_block_pos + verts[face * 4]);
+                        vertices.Add(_block_pos + verts[face * 4 + 1]);
+                        vertices.Add(_block_pos + verts[face * 4 + 2]);
+                        vertices.Add(_block_pos + verts[face * 4 + 3]);
 
-                        normals.Add(norms[face]);
-                        normals.Add(norms[face]);
-                        normals.Add(norms[face]);
-                        normals.Add(norms[face]);
+                        normals.Add(dirs[face]);
+                        normals.Add(dirs[face]);
+                        normals.Add(dirs[face]);
+                        normals.Add(dirs[face]);
 
                         int texture_idx = face_data[_block_type * 6 + face];
                         float2 base_uv = new float2(0.0625f * (texture_idx % 16), 1.0f - (texture_idx / 16) - 0.0625f);
