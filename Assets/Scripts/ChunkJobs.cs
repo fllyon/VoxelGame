@@ -4,57 +4,57 @@ using Unity.Jobs;
 using Unity.Mathematics;
 
 [BurstCompile]
-public struct ChunkNoiseJob : IJobParallelFor {
+public struct ChunkWideNoiseJob : IJob {
 
     [ReadOnly] public int chunk_size;
     [ReadOnly] public int3 chunk_pos;
     public NativeArray<int> ground_heights;
     public NativeArray<int> biomes;
 
-    public void Execute(int idx) {
+    public void Execute() {
 
-        int block_x = idx % chunk_size;
-        int block_z = idx / chunk_size;
-        int x = chunk_pos.x + block_x;
-        int z = chunk_pos.z + block_z;
+        for (int idx = 0; idx < 1024; ++idx) {
+            int3 local_pos = idx.Unflatten2D();
+            int3 global_pos = chunk_pos + local_pos;
 
-        float forest = WorldGen.GetForestWeight(x, z);
-        float desert = WorldGen.GetDesertWeight(x, z);
-        float diff = math.abs(forest - desert);
+            float forest = WorldGen.GetForestWeight(global_pos.x, global_pos.z);
+            float desert = WorldGen.GetDesertWeight(global_pos.x, global_pos.z);
+            float diff = math.abs(forest - desert);
 
-        if (diff < 0.05f) {
+            if (diff < 0.05f) {
 
-            diff *= 10;
-            float upper = 0.5f + diff;
-            float lower = 0.5f - diff;
-            upper *= upper *= upper;
-            lower *= lower *= lower;
+                diff *= 10;
+                float upper = 0.5f + diff;
+                float lower = 0.5f - diff;
+                upper *= upper *= upper;
+                lower *= lower *= lower;
 
-            if (desert > forest) { 
-                desert = upper / (upper + lower);
-                forest = lower / (upper + lower);
-            } else {
-                forest = upper / (upper + lower);
-                desert = lower / (upper + lower);
+                if (desert > forest) { 
+                    desert = upper / (upper + lower);
+                    forest = lower / (upper + lower);
+                } else {
+                    forest = upper / (upper + lower);
+                    desert = lower / (upper + lower);
+                }
+
+                int forest_surface = WorldGen.GetSurfaceHeight(global_pos.x, global_pos.z);
+                int desert_surface = WorldGen.GetDesertSurfaceHeight(global_pos.x, global_pos.z);
+
+                ground_heights[idx] = (int)(forest_surface * forest + desert_surface * desert);
+            } else if (desert > forest) { 
+                ground_heights[idx] = WorldGen.GetDesertSurfaceHeight(global_pos.x, global_pos.z); 
+            } else { 
+                ground_heights[idx] = WorldGen.GetSurfaceHeight(global_pos.x, global_pos.z);
             }
 
-            int forest_surface = WorldGen.GetSurfaceHeight(x, z);
-            int desert_surface = WorldGen.GetDesertSurfaceHeight(x, z);
-
-            ground_heights[idx] = (int)(forest_surface * forest + desert_surface * desert);
-        } else if (desert > forest) { 
-            ground_heights[idx] = WorldGen.GetDesertSurfaceHeight(x, z); 
-        } else { 
-            ground_heights[idx] = WorldGen.GetSurfaceHeight(x, z);
-        }
-
-        biomes[idx] = (desert > forest) ? 1 : 0;
+            biomes[idx] = (desert > forest) ? 1 : 0;
+        }       
     }
 
 }
 
 [BurstCompile]
-public struct ChunkGenerateJob : IJobParallelFor {
+public struct ChunkWideGenerateJob : IJob {
 
     [ReadOnly] public int chunk_size;
     [ReadOnly] public int3 chunk_pos;
@@ -62,20 +62,23 @@ public struct ChunkGenerateJob : IJobParallelFor {
     [ReadOnly] public NativeArray<int> biomes;
     public NativeArray<byte> blocks;
 
-    public void Execute(int idx) {
+    public void Execute() {
 
-        int3 block_pos = idx.Unflatten();
-        int block_height = chunk_pos.y + block_pos.y;
-        if (block_height == 0) { blocks[idx] = 1; return; }
+        for (int idx = 0; idx < 32768; ++idx) {
+            int3 local_pos = idx.Unflatten();
+            int global_height = chunk_pos.y + local_pos.y;
 
-        int ground_height = ground_heights[block_pos.z * chunk_size + block_pos.x];
-        int biomes_idx = block_pos.z * chunk_size + block_pos.x;
+            if (global_height == 0) { blocks[idx] = 1; continue; }
 
-        if (block_height < (ground_height >> 2)) { blocks[idx] = 6; }
-        else if (block_height < (ground_height >> 1)) { blocks[idx] = 5; }
-        else if (block_height < ground_height - 6) { blocks[idx] = 4; }
-        else if (block_height < ground_height) { blocks[idx] = (biomes[biomes_idx] == 0) ? (byte)3 : (byte)7; }
-        else if (block_height == ground_height) { blocks[idx] = (biomes[biomes_idx] == 0) ? (byte)2 : (byte)7; }
+            int slice_idx = local_pos.z * chunk_size + local_pos.x;
+            int ground_height = ground_heights[slice_idx];
+
+            if (global_height < (ground_height >> 2)) { blocks[idx] = 6; }
+            else if (global_height < (ground_height >> 1)) { blocks[idx] = 5; }
+            else if (global_height < ground_height - 6) { blocks[idx] = 4; }
+            else if (global_height < ground_height) { blocks[idx] = (biomes[slice_idx] == 0) ? (byte)3 : (byte)7; }
+            else if (global_height == ground_height) { blocks[idx] = (biomes[slice_idx] == 0) ? (byte)2 : (byte)7; }
+        }
 
     }
 

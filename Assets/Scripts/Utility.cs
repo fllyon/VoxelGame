@@ -48,6 +48,13 @@ static class Utility {
     }
 
     [BurstCompile]
+    public static int3 Unflatten2D(this int input) {
+        int x = input & 0x1F;
+        int z = (input >> 5) & 0x1F;
+        return new int3(x, 0, z);
+    }
+
+    [BurstCompile]
     public static int3 GetChunkCoord(int3 coord) {
         return new int3((int)math.floor(coord.x / (float)ChunkData.CHUNK_SIZE),
                         (int)math.floor(coord.y / (float)ChunkData.CHUNK_SIZE),
