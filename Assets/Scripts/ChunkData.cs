@@ -1,8 +1,6 @@
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEngine;
-using UnityEngine.UIElements;
 
 public struct ChunkData {
 

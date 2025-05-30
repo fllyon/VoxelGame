@@ -1,12 +1,9 @@
+using Priority_Queue;
 using System.Collections.Generic;
-using System.Linq;
 using Unity.Collections;
 using Unity.Mathematics;
-using Unity.VisualScripting;
-using UnityEngine;
-using Priority_Queue;
 using Unity.Jobs;
-using System.Diagnostics;
+using UnityEngine;
 
 public class ChunkManager {
 
@@ -52,6 +49,7 @@ public class ChunkManager {
     void Initialize() {
 
         Transform world_transform = GameObject.Find("World").transform;
+        Material world_material = Resources.Load<Material>("BlockTextures");
 
         // Create the chunk and generate it
         for (int x = 0; x < WORLD_SIZE_IN_CHUNKS; ++x) {
@@ -70,7 +68,7 @@ public class ChunkManager {
                         }
                     };
                     _chunk_component = _chunk_object.AddComponent<Chunk>();
-                    _chunk_object.GetOrAddComponent<MeshRenderer>().material = Resources.Load<Material>("BlockTextures");
+                    _chunk_object.GetComponent<MeshRenderer>().material = world_material;
 
                     chunks.Add(_chunk_coord);
                     chunk_components.Add(_chunk_coord, _chunk_component);

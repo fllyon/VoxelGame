@@ -13,6 +13,6 @@ public class Player : MonoBehaviour {
     }
 
     public static float ChunkDistanceFromPlayer(int3 chunk_coord) {
-        return math.distance(chunk_coord, player_chunk);
+        return math.lengthsq(chunk_coord - player_chunk);
     }
 }
