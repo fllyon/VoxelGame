@@ -56,9 +56,9 @@ static class Utility {
 
     [BurstCompile]
     public static int3 GetChunkCoord(int3 coord) {
-        return new int3((int)math.floor(coord.x / (float)ChunkData.CHUNK_SIZE),
-                        (int)math.floor(coord.y / (float)ChunkData.CHUNK_SIZE),
-                        (int)math.floor(coord.z / (float)ChunkData.CHUNK_SIZE));
+        return new int3((int)math.floor(coord.x / 32f),
+                        (int)math.floor(coord.y / 32f),
+                        (int)math.floor(coord.z / 32f));
     }
 
     public static int3[] dirs = {
