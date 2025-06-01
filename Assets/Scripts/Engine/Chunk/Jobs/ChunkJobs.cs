@@ -1,182 +1,11 @@
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEditor.ShaderGraph.Internal;
 using UnityEngine;
-
-// [BurstCompile]
-// public struct ChunkNoiseJob : IJob {
-
-//     [ReadOnly] public int chunk_size;
-//     [ReadOnly] public int3 chunk_pos;
-//     public NativeArray<int> ground_heights;
-//     public NativeArray<int> biomes;
-
-//     public void Execute() {
-
-//         for (int idx = 0; idx < 1024; ++idx) {
-//             int3 local_pos = idx.Unflatten2D();
-//             int3 global_pos = chunk_pos + local_pos;
-
-//             float forest = WorldGen.GetForestWeight(global_pos.x, global_pos.z);
-//             float desert = WorldGen.GetDesertWeight(global_pos.x, global_pos.z);
-//             float diff = math.abs(forest - desert);
-
-//             if (diff < 0.05f) {
-
-//                 diff *= 10;
-//                 float upper = 0.5f + diff;
-//                 float lower = 0.5f - diff;
-//                 upper *= upper *= upper;
-//                 lower *= lower *= lower;
-
-//                 if (desert > forest) { 
-//                     desert = upper / (upper + lower);
-//                     forest = lower / (upper + lower);
-//                 } else {
-//                     forest = upper / (upper + lower);
-//                     desert = lower / (upper + lower);
-//                 }
-
-//                 int forest_surface = WorldGen.GetSurfaceHeight(global_pos.x, global_pos.z);
-//                 int desert_surface = WorldGen.GetDesertSurfaceHeight(global_pos.x, global_pos.z);
-
-//                 ground_heights[idx] = (int)(forest_surface * forest + desert_surface * desert);
-//             } else if (desert > forest) { 
-//                 ground_heights[idx] = WorldGen.GetDesertSurfaceHeight(global_pos.x, global_pos.z); 
-//             } else { 
-//                 ground_heights[idx] = WorldGen.GetSurfaceHeight(global_pos.x, global_pos.z);
-//             }
-
-//             biomes[idx] = (desert > forest) ? 1 : 0;
-//         }       
-//     }
-
-// }
-
-// [BurstCompile]
-// public struct ChunkGenerateJob : IJob {
-
-//     [ReadOnly] public int chunk_size;
-//     [ReadOnly] public int3 chunk_pos;
-//     [ReadOnly] public NativeArray<int> ground_heights;
-//     [ReadOnly] public NativeArray<int> biomes;
-//     public NativeArray<byte> blocks;
-
-//     public void Execute() {
-
-//         for (int idx = 0; idx < 32768; ++idx) {
-//             int3 local_pos = idx.Unflatten();
-//             int global_height = chunk_pos.y + local_pos.y;
-
-//             if (global_height == 0) { blocks[idx] = 1; continue; }
-
-//             int slice_idx = local_pos.z * chunk_size + local_pos.x;
-//             int ground_height = ground_heights[slice_idx];
-
-//             if (global_height < (ground_height >> 2)) { blocks[idx] = 6; }
-//             else if (global_height < (ground_height >> 1)) { blocks[idx] = 5; }
-//             else if (global_height < ground_height - 6) { blocks[idx] = 4; }
-//             else if (global_height < ground_height) { blocks[idx] = (biomes[slice_idx] == 0) ? (byte)3 : (byte)7; }
-//             else if (global_height == ground_height) { blocks[idx] = (biomes[slice_idx] == 0) ? (byte)2 : (byte)7; }
-//         }
-
-//     }
-
-// }
-
-// [BurstCompile]
-// public struct ChunkDrawJob : IJob {
-
-//     [ReadOnly] public int chunk_size;
-//     [ReadOnly] public NativeArray<byte> blocks;
-//     [ReadOnly] public NativeArray<byte> nbr_blocks;
-//     [ReadOnly] public NativeArray<int> face_data;
-//     public NativeList<float3> vertices; // Initialize to size 32,768
-//     public NativeList<float3> normals;
-//     public NativeList<float2> uvs;
-//     public NativeList<int> triangles;
-
-//     public void Execute() {
-
-//         int vertex_count = 0;
-
-//         NativeArray<int3> dirs = new NativeArray<int3>(6, Allocator.Temp);
-//         dirs[0] = new int3(0, 1, 0);
-//         dirs[1] = new int3(0, 0, 1);
-//         dirs[2] = new int3(1, 0, 0);
-//         dirs[3] = new int3(0, 0, -1);
-//         dirs[4] = new int3(-1, 0, 0);
-//         dirs[5] = new int3(0, -1, 0);
-
-//         NativeArray<int3> verts = new NativeArray<int3>(24, Allocator.Temp);
-//         verts[0] = new int3(0, 1, 0); verts[1] = new int3(0, 1, 1); verts[2] = new int3(1, 1, 1); verts[3] = new int3(1, 1, 0);
-//         verts[4] = new int3(0, 0, 1); verts[5] = new int3(1, 0, 1); verts[6] = new int3(1, 1, 1); verts[7] = new int3(0, 1, 1);
-//         verts[8] = new int3(1, 0, 1); verts[9] = new int3(1, 0, 0); verts[10] = new int3(1, 1, 0); verts[11] = new int3(1, 1, 1);
-//         verts[12] = new int3(1, 0, 0); verts[13] = new int3(0, 0, 0); verts[14] = new int3(0, 1, 0); verts[15] = new int3(1, 1, 0);
-//         verts[16] = new int3(0, 0, 0); verts[17] = new int3(0, 0, 1); verts[18] = new int3(0, 1, 1); verts[19] = new int3(0, 1, 0);
-//         verts[20] = new int3(0, 0, 0); verts[21] = new int3(1, 0, 0); verts[22] = new int3(1, 0, 1); verts[23] = new int3(0, 0, 1);
-
-//         int blocks_per_chunk = chunk_size.Cubed();
-
-//         int idx = 0;
-//         for (int x = 0; x < chunk_size; ++x) {
-//             for (int z = 0; z < chunk_size; ++z) {
-//                 for (int y = 0; y < chunk_size; ++y) {
-                    
-//                     byte _block_type = blocks[idx++];
-//                     if (_block_type == 0) { continue; }
-
-//                     int3 _block_pos = new int3(x, y, z);
-//                     for (int face = 0; face < 6; ++face) {
-                        
-//                         int3 _nbr_pos = _block_pos + dirs[face];
-//                         byte nbr_type = (0 <= _nbr_pos.x && _nbr_pos.x < 32 &&
-//                                          0 <= _nbr_pos.y && _nbr_pos.y < 32 &&
-//                                          0 <= _nbr_pos.z && _nbr_pos.z < 32)
-//                                             ? blocks[_nbr_pos.Flatten()]
-//                                             : nbr_blocks[face * blocks_per_chunk + _nbr_pos.GetLocalPos().Flatten()];
-
-//                         if (nbr_type != 0) { continue; }
-
-//                         vertices.Add(_block_pos + verts[face * 4]);
-//                         vertices.Add(_block_pos + verts[face * 4 + 1]);
-//                         vertices.Add(_block_pos + verts[face * 4 + 2]);
-//                         vertices.Add(_block_pos + verts[face * 4 + 3]);
-
-//                         normals.Add(dirs[face]);
-//                         normals.Add(dirs[face]);
-//                         normals.Add(dirs[face]);
-//                         normals.Add(dirs[face]);
-
-//                         int texture_idx = face_data[_block_type * 6 + face];
-//                         float2 base_uv = new float2(0.0625f * (texture_idx % 16), 1.0f - (texture_idx / 16) - 0.0625f);
-
-//                         uvs.Add(base_uv);
-//                         uvs.Add(base_uv + new float2(0.0625f, 0));
-//                         uvs.Add(base_uv + new float2(0.0625f, 0.0625f));
-//                         uvs.Add(base_uv + new float2(0, 0.0625f));
-
-//                         triangles.Add(vertex_count);
-//                         triangles.Add(vertex_count + 1);
-//                         triangles.Add(vertex_count + 2);
-//                         triangles.Add(vertex_count + 2);
-//                         triangles.Add(vertex_count + 3);
-//                         triangles.Add(vertex_count);
-
-//                         vertex_count += 4;
-//                     }
-
-//                 }
-//             }
-//         }
-
-//     }
-
-// }
-
-// =====================
+using UnityEngine.Rendering;
 
 [BurstCompile]
 public struct ChunkJob : IJobParallelFor {
@@ -219,16 +48,126 @@ public struct ChunkJob : IJobParallelFor {
 [BurstCompile]
 public struct RenderJob : IJobParallelFor {
 
-    [ReadOnly] public int3 chunk_pos;
-    // ChunkAccessor
-    public NativeParallelHashMap<int3, Mesh.MeshDataArray>.ParallelWriter output;
+    [ReadOnly] public NativeArray<int3> jobs;
+    [ReadOnly] public ChunkAccessor accessor;
+    [ReadOnly] public NativeArray<int3> verts;
+    [ReadOnly] public NativeArray<int3> dirs;
+    [ReadOnly] public NativeArray<VertexAttributeDescriptor> vertex_attributes;
+    [ReadOnly] public Data.BlockData block_data;
+    public Mesh.MeshDataArray output;
 
     public void Execute(int idx) {
 
-        // Create a ChunkAccessor class that is bittable and can be passed into jobs
-        // Create a method in ChunkManager that takes in a chunk_coord and returns the surrounding chunk data
+        int3 chunk_pos = jobs[idx];
+        ChunkData chunk = accessor.chunk_data[chunk_pos];
 
-        // Iterate through the current chunk and bu
+        int vertex_count = 0;
+        NativeList<float3> vertices = new NativeList<float3>(Allocator.Temp);
+        NativeList<float3> normals = new NativeList<float3>(Allocator.Temp);
+        NativeList<float2> uvs = new NativeList<float2>(Allocator.Temp);
+        NativeList<int> triangles = new NativeList<int>(Allocator.Temp);
+
+        for (int x = 0; x < 32; ++x) {
+            for (int z = 0; z < 32; ++z) {
+                for (int y = 0; y < 32; ++y) {
+
+                    int3 block_pos = new int3(x, y, z);
+                    int block_idx = block_pos.Flatten();
+                    int block_type = chunk.blocks[block_idx];
+                    if (block_type == 0) continue;
+
+                    for (int face = 0; face < 6; ++face) {
+
+                        int3 nbr_pos = new int3(x, y, z) + dirs[face];
+                        int3 nbr_acc = 3;
+                        if (nbr_pos.y >= 32) { nbr_acc = 0; }
+                        else if (nbr_pos.z >= 32) { nbr_acc = 1; }
+                        else if (nbr_pos.x >= 32) { nbr_acc = 2; }
+                        else if (nbr_pos.z < 0) { nbr_acc = 4; }
+                        else if (nbr_pos.x < 0) { nbr_acc = 5; }
+                        else if (nbr_pos.y < 0) { nbr_acc = 6; }
+                        int nbr_idx = Utility.GetLocalPos(nbr_pos).Flatten();
+                        int nbr_type = accessor.chunk_data[nbr_acc].blocks[nbr_idx];
+                        if (nbr_type != 0) { continue; }
+
+                        vertices.Add(block_pos + verts[face * 4]);
+                        vertices.Add(block_pos + verts[face * 4 + 1]);
+                        vertices.Add(block_pos + verts[face * 4 + 2]);
+                        vertices.Add(block_pos + verts[face * 4 + 3]);
+
+                        normals.Add(dirs[face]);
+                        normals.Add(dirs[face]);
+                        normals.Add(dirs[face]);
+                        normals.Add(dirs[face]);
+
+                        int texture_idx = block_data.face_data[block_type * 6 + face];
+                        float2 base_uv = new float2(0.0625f * (texture_idx % 16), 1.0f - (texture_idx / 16) - 0.0625f);
+
+                        uvs.Add(base_uv);
+                        uvs.Add(base_uv + new float2(0.0625f, 0));
+                        uvs.Add(base_uv + new float2(0.0625f, 0.0625f));
+                        uvs.Add(base_uv + new float2(0, 0.0625f));
+
+                        triangles.Add(vertex_count);
+                        triangles.Add(vertex_count + 1);
+                        triangles.Add(vertex_count + 2);
+                        triangles.Add(vertex_count + 2);
+                        triangles.Add(vertex_count + 3);
+                        triangles.Add(vertex_count);
+
+                        vertex_count += 4;
+
+                    }
+            
+                }
+            }
+        }
+
+        Mesh.MeshData mesh = output[idx];
+
+        mesh.SetVertexBufferParams(vertices.Length, vertex_attributes);
+        ApplyMeshData(mesh, vertices, normals, uvs, triangles);
+
+        vertices.Dispose();
+        normals.Dispose();
+        uvs.Dispose();
+        triangles.Dispose();
+
+    }
+
+    unsafe public void ApplyMeshData(
+        Mesh.MeshData mesh,
+        NativeList<float3> vertices,
+        NativeList<float3> normals,
+        NativeList<float2> uvs,
+        NativeList<int> triangles) {
+
+        unsafe {
+
+            mesh.SetIndexBufferParams(triangles.Length, IndexFormat.UInt32);
+
+            var vertexData = mesh.GetVertexData<byte>(); // Use byte because it’s interleaved
+            int stride = mesh.GetVertexBufferStride(0);  // Get per-vertex stride (e.g. 32 bytes)
+
+            for (int i = 0; i < vertices.Length; i++) {
+                int offset = i * stride;
+
+                float3 vertice = vertices[i];
+                float3 normal = normals[i];
+                float2 uv = uvs[i];
+
+                UnsafeUtility.CopyStructureToPtr(ref vertice, (byte*)vertexData.GetUnsafePtr() + offset + 0);
+                UnsafeUtility.CopyStructureToPtr(ref normal, (byte*)vertexData.GetUnsafePtr() + offset + 12);
+                UnsafeUtility.CopyStructureToPtr(ref uv,     (byte*)vertexData.GetUnsafePtr() + offset + 24);
+            }
+
+            var indexData = mesh.GetIndexData<int>();
+            indexData.CopyFrom(triangles.AsArray());
+
+            mesh.subMeshCount = 1;
+            mesh.SetSubMesh(0, new SubMeshDescriptor(0, triangles.Length));
+            
+        }
 
     }
 
