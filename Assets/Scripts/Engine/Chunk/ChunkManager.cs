@@ -92,12 +92,14 @@ public class ChunkManager {
     public void AddRenderedChunks(NativeArray<int3> _jobs, Mesh.MeshDataArray _chunk_meshes) {
         Mesh[] meshes = new Mesh[_jobs.Length];
         for (int idx = 0; idx < _jobs.Length; ++idx) { 
-            meshes[idx] = chunk_components[_jobs[idx]].mesh_filter.mesh;
+            GameObject chunk_object = new GameObject("World", typeof(MeshFilter), typeof(MeshRenderer));
+            chunk_object.transform.position = Vector3.zero;
+
+            Chunk chunk_component = chunk_object.AddComponent<Chunk>();
+            meshes[idx] = chunk_component.mesh_filter.mesh;
+            chunk_components[_jobs[idx]] = chunk_component;
         }
         Mesh.ApplyAndDisposeWritableMeshData(_chunk_meshes, meshes);
-
-        // TODO: FIX
-        // chunk_components is empty as of right now. Need to populate with finished jobs
     }
 
     public void Dispose() {
