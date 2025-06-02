@@ -1,9 +1,6 @@
 using Priority_Queue;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
 using Unity.Collections;
 using Unity.Jobs;
-using Unity.Jobs.LowLevel.Unsafe;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -62,7 +59,7 @@ public class ChunkScheduler {
         render_queue = new FastPriorityQueue<ChunkNode>(WorldSettings.RENDER_CONTAINER_SIZE);
         render_jobs = new NativeArray<int3>(render_batch_size, Allocator.Persistent);
         render_accessor = default;
-        render_output = default;
+        render_output = Mesh.AllocateWritableMeshData(0);
         render_handle = default;
     }
 
@@ -83,10 +80,20 @@ public class ChunkScheduler {
 
     public void LateUpdate() { ScheduleJobs(); }
 
+    public void ReplaceGenerateQueue(NativeList<int3> chunks) {
+        generate_queue.Clear();
+        QueueChunksForGeneration(chunks);
+    }
+
     public void QueueChunksForGeneration(NativeList<int3> chunks) {
         foreach (int3 chunk_coord in chunks) {
             generate_queue.Enqueue(new ChunkNode(chunk_coord), Player.ChunkDistanceFromPlayer(chunk_coord));
         }
+    }
+
+    public void ReplaceRenderQueue(NativeList<int3> chunks) {
+        render_queue.Clear();
+        QueueChunksForRendering(chunks);
     }
 
     public void QueueChunksForRendering(NativeList<int3> chunks) {
@@ -96,6 +103,9 @@ public class ChunkScheduler {
     }
 
     public void Dispose() {
+
+        generate_handle.Complete();
+        render_handle.Complete();
 
         verts.Dispose();
         dirs.Dispose();

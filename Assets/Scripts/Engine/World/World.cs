@@ -38,7 +38,7 @@ public class World : MonoBehaviour {
     }
 
     void LateUpdate() {
-        if (math.all(player_chunk != Player.chunk_pos)) { UpdatePlayerChunk(Player.chunk_pos); }
+        if (math.any(player_chunk != Player.chunk_pos)) { UpdatePlayerChunk(Player.chunk_pos); }
         chunk_scheduler.LateUpdate();  
     }
 
@@ -54,7 +54,7 @@ public class World : MonoBehaviour {
 
     private void UpdatePlayerChunk(int3 chunk_coord) {
         player_chunk = chunk_coord;
-        chunk_manager.UpdatePlayerChunk();
+        chunk_manager.UpdatePlayerChunk(chunk_coord);
     }
 
 }

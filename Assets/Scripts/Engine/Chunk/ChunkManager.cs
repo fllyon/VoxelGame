@@ -1,9 +1,7 @@
-using Priority_Queue;
 using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
-using Unity.Jobs;
 using UnityEngine;
 
 public class ChunkManager {
@@ -22,28 +20,39 @@ public class ChunkManager {
     //                        Public Methods                         //
     // ============================================================= //
     
-    public void UpdatePlayerChunk() {
+    public void UpdatePlayerChunk(int3 player_chunk) {
 
-        int3 player_chunk = World.player_chunk;
-        int view_distance = WorldSettings.RENDER_DISTANCE;
-        int load_distance = WorldSettings.LOAD_DISTANCE;
+        int load_range = WorldSettings.LOAD_DISTANCE;
+        int load_distance = WorldSettings.LOAD_DISTANCE.Squared();
+        int render_distance = WorldSettings.RENDER_DISTANCE.Squared();
 
-        NativeList<int3> chunks_to_remove = new NativeList<int3>(WorldSettings.LOAD_CONTAINER_SIZE, Allocator.Persistent);
+        int min_x = math.max(player_chunk.x - load_range, 0);
+        int min_y = math.max(player_chunk.y - load_range, 0);
+        int min_z = math.max(player_chunk.z - load_range, 0);
+        int max_x = math.min(player_chunk.x + load_range, WorldSettings.WORLD_SIZE_IN_CHUNKS);
+        int max_y = math.min(player_chunk.y + load_range, WorldSettings.WORLD_HEIGHT_IN_CHUNKS);
+        int max_z = math.min(player_chunk.z + load_range, WorldSettings.WORLD_SIZE_IN_CHUNKS);
+
         NativeList<int3> chunks_to_unrender = new NativeList<int3>(WorldSettings.RENDER_CONTAINER_SIZE, Allocator.Persistent);
 
-        foreach (var data in chunk_data) {
+        foreach (var data in chunk_components) {
             int3 chunk_pos = data.Key;
-            float distance = math.length(player_chunk - chunk_pos);
-
-            if (distance <= view_distance) { continue; }
-            else if (distance <= load_distance) { chunks_to_unrender.Add(chunk_pos); }
-            else { chunks_to_remove.Add(chunk_pos); }
+            float distance = math.lengthsq(player_chunk - chunk_pos);
+            if (distance >= render_distance) { chunks_to_unrender.Add(chunk_pos); }
         }
 
         foreach (int3 chunk_pos in chunks_to_unrender) {
-            if (!chunk_components.ContainsKey(chunk_pos)) { continue; }
             Object.Destroy(chunk_components[chunk_pos].gameObject);
             chunk_components.Remove(chunk_pos);
+        }
+
+        chunks_to_unrender.Dispose();
+        NativeList<int3> chunks_to_remove = new NativeList<int3>(WorldSettings.LOAD_CONTAINER_SIZE, Allocator.Persistent);
+
+        foreach (var data in chunk_data) {
+            int3 chunk_pos = data.Key;
+            float distance = math.lengthsq(player_chunk - chunk_pos);
+            if (distance >= load_distance) { chunks_to_remove.Add(chunk_pos); }
         }
 
         foreach (int3 chunk_pos in chunks_to_remove) {
@@ -52,25 +61,32 @@ public class ChunkManager {
         }
 
         chunks_to_remove.Dispose();
-        chunks_to_unrender.Dispose();
 
         NativeList<int3> chunks_to_generate = new NativeList<int3>(WorldSettings.LOAD_CONTAINER_SIZE, Allocator.Persistent);
-
-        // For each chunk in range that's not yet generated, generate it
-        for (int x = player_chunk.x - load_distance; x <= player_chunk.x + load_distance; ++x) {
-            for (int z = player_chunk.z - load_distance; z <= player_chunk.z + load_distance; ++z) {
-                for (int y = player_chunk.y - load_distance; y <= player_chunk.y + load_distance; ++y) {
+        NativeList<int3> chunks_to_render = new NativeList<int3>(WorldSettings.RENDER_CONTAINER_SIZE, Allocator.Persistent);
+        
+        for (int x = min_x; x < max_x; ++x) {
+            for (int y = min_y; y < max_y; ++y) {
+                for (int z = min_z; z < max_z; ++z) {
                     
-                    int3 chunk_pos = new int3(x, y, z);
-                    if (!Utility.ChunkInWorld(chunk_pos) || chunk_data.ContainsKey(chunk_pos)) { continue; }
-                    chunks_to_generate.Add(chunk_pos); 
-
+                    int3 chunk_coord = new int3(x, y, z);
+                    float distance = math.lengthsq(player_chunk - chunk_coord);
+                    if (distance < load_distance && !chunk_data.ContainsKey(chunk_coord)) { 
+                        chunks_to_generate.Add(chunk_coord);
+                    } else if (distance < render_distance && !chunk_components.ContainsKey(chunk_coord) &&
+                               GetNeighbors(chunk_coord) == 6) {
+                        chunks_to_render.Add(chunk_coord);
+                    }
+                    
                 }
             }
         }
 
-        chunk_scheduler.QueueChunksForGeneration(chunks_to_generate);
+        chunk_scheduler.ReplaceGenerateQueue(chunks_to_generate);
         chunks_to_generate.Dispose();
+
+        chunk_scheduler.ReplaceRenderQueue(chunks_to_render);
+        chunks_to_render.Dispose();
     }
 
     [BurstCompile]
@@ -87,8 +103,12 @@ public class ChunkManager {
         foreach (var pair in _chunk_data) { 
             chunk_data.Add(pair.Key, pair.Value);
             foreach (int3 dir in Utility.self_dirs) { 
-                int3 nbr_pos = pair.Key + dir;
-                if (GetNeighbors(nbr_pos) == 6 && Utility.ChunkInWorld(nbr_pos)) { chunks_to_render.Add(nbr_pos); }    
+
+                int3 nbr_coord = pair.Key + dir;
+                if (GetNeighbors(nbr_coord) == 6 && ChunkInWorld(nbr_coord) &&
+                    Player.ChunkDistanceFromPlayer(nbr_coord) < WorldSettings.RENDER_DISTANCE) { 
+                        chunks_to_render.Add(nbr_coord);
+                }    
             }
         }
 
