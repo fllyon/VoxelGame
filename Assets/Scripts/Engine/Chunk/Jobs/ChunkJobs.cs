@@ -32,8 +32,8 @@ public struct ChunkJob : IJobParallelFor {
 
                     int block_idx = new int3(x, y, z).Flatten();
                     if (global_y == 0) { chunk_data.blocks[block_idx] = 1; }
-                    else if (global_y < surface_height) { chunk_data.blocks[block_idx] = 2; }
-                    else if (global_y == surface_height) { chunk_data.blocks[block_idx] = 3; }
+                    else if (global_y < surface_height) { chunk_data.blocks[block_idx] = 3; }
+                    else if (global_y == surface_height) { chunk_data.blocks[block_idx] = 2; }
                     else { break; }
 
                 }
@@ -73,9 +73,9 @@ public struct RenderJob : IJobParallelFor {
 
                     int3 block_pos = new int3(x, y, z);
                     int block_idx = block_pos.Flatten();
-                    int block_type = 0;
                     if (accessor.chunk_data.ContainsKey(chunk_coord) &&
                         accessor.chunk_data[chunk_coord].blocks[block_idx] == 0) { continue; }
+                    int block_type = accessor.chunk_data[chunk_coord].blocks[block_idx];
 
                     for (int face = 0; face < 6; ++face) {
 

@@ -59,9 +59,10 @@ public class ChunkManager {
         for (int x = player_chunk.x - load_distance; x <= player_chunk.x + load_distance; ++x) {
             for (int z = player_chunk.z - load_distance; z <= player_chunk.z + load_distance; ++z) {
                 for (int y = player_chunk.y - load_distance; y <= player_chunk.y + load_distance; ++y) {
-
+                    
                     int3 chunk_pos = new int3(x, y, z);
-                    if (!chunk_data.ContainsKey(chunk_pos)) { chunks_to_generate.Add(chunk_pos); } 
+                    if (!Utility.ChunkInWorld(chunk_pos) || chunk_data.ContainsKey(chunk_pos)) { continue; }
+                    chunks_to_generate.Add(chunk_pos); 
 
                 }
             }
@@ -86,7 +87,7 @@ public class ChunkManager {
             chunk_data.Add(pair.Key, pair.Value);
             foreach (int3 dir in Utility.self_dirs) { 
                 int3 nbr_pos = pair.Key + dir;
-                if (GetNeighbors(nbr_pos) == 6) { chunks_to_render.Add(nbr_pos); }    
+                if (GetNeighbors(nbr_pos) == 6 && Utility.ChunkInWorld(nbr_pos)) { chunks_to_render.Add(nbr_pos); }    
             }
         }
 
@@ -108,7 +109,7 @@ public class ChunkManager {
             meshes[idx] = chunk_component.mesh_filter.mesh;
             chunk_components[_jobs[idx]] = chunk_component;
         }
-        
+
         Mesh.ApplyAndDisposeWritableMeshData(_chunk_meshes, meshes);
         foreach (Mesh mesh in meshes) { mesh.RecalculateBounds(); }
 

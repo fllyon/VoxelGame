@@ -61,6 +61,13 @@ static class Utility {
                         (int)math.floor(coord.z / 32f));
     }
 
+    [BurstCompile]
+    public static bool ChunkInWorld(int3 coord) {
+        return 0 <= coord.x && coord.x < WorldSettings.WORLD_SIZE_IN_CHUNKS &&
+               0 <= coord.y && coord.y < WorldSettings.WORLD_HEIGHT_IN_CHUNKS &&
+               0 <= coord.z && coord.z < WorldSettings.WORLD_SIZE_IN_CHUNKS;
+    }
+
     public static int3[] dirs = {
         new int3(0, 1, 0),
         new int3(0, 0, 1),
