@@ -102,8 +102,11 @@ public class ChunkScheduler {
         vertex_attributes.Dispose();
 
         generate_jobs.Dispose();
+        foreach (var pair in generate_output) { pair.Value.Dispose(); }
         generate_output.Dispose();
+
         render_jobs.Dispose();
+        render_accessor.Dispose();
 
     }
 

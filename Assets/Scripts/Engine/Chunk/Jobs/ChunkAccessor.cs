@@ -14,7 +14,9 @@ public struct ChunkAccessor {
         foreach (int3 chunk_coord in chunk_coords) {
             for (int idx = 0; idx < Utility.self_dirs.Length; ++idx) {
                 int3 coord = chunk_coord + Utility.self_dirs[idx];
-                if (chunk_data.ContainsKey(coord) || !chunks.ContainsKey(coord)) { continue; }
+                if (chunk_data.ContainsKey(coord)) { continue; }
+                if (!Utility.ChunkInWorld(coord)) { chunk_data[coord] = new ChunkData(coord); }
+                if (!chunks.ContainsKey(coord)) { continue; }
                 chunk_data[coord] = chunks[coord];
             }
         }

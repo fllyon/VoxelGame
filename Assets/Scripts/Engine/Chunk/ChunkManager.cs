@@ -36,11 +36,12 @@ public class ChunkManager {
             float distance = math.length(player_chunk - chunk_pos);
 
             if (distance <= view_distance) { continue; }
-            else if (distance <= load_distance) { }
+            else if (distance <= load_distance) { chunks_to_unrender.Add(chunk_pos); }
             else { chunks_to_remove.Add(chunk_pos); }
         }
 
         foreach (int3 chunk_pos in chunks_to_unrender) {
+            if (!chunk_components.ContainsKey(chunk_pos)) { continue; }
             Object.Destroy(chunk_components[chunk_pos].gameObject);
             chunk_components.Remove(chunk_pos);
         }
@@ -117,6 +118,7 @@ public class ChunkManager {
 
     [BurstCompile]
     public void Dispose() {
+        foreach (var pair in chunk_data) { pair.Value.Dispose(); }
         chunk_data.Dispose();
     }
 
