@@ -3,6 +3,9 @@ using UnityEngine;
 
 public class World : MonoBehaviour {
 
+    public static Transform world_object;
+
+    public static Material material = null;
     public static Data.BlockData block_data;
 
     private static ChunkManager chunk_manager;
@@ -16,7 +19,11 @@ public class World : MonoBehaviour {
 
     void Awake() {
 
+        world_object = transform;
+
+        material = Resources.Load<Material>("BlockTextures");
         block_data = Data.LoadData();
+
         chunk_manager = new ChunkManager();
         chunk_scheduler = new ChunkScheduler(block_data);
 

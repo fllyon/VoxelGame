@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Design;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Jobs.LowLevel.Unsafe;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -25,13 +26,14 @@ public class ChunkScheduler {
     private int render_batch_size = 1;
     private FastPriorityQueue<ChunkNode> render_queue;
     private NativeArray<int3> render_jobs; 
+    private ChunkAccessor render_accessor;
     private Mesh.MeshDataArray render_output;
     private JobHandle render_handle = default;
 
     public ChunkScheduler(Data.BlockData _block_data) {
         block_data = _block_data;
         
-        NativeArray<int3> verts = new NativeArray<int3>(24, Allocator.Persistent);
+        verts = new NativeArray<int3>(24, Allocator.Persistent);
         verts[0] = new int3(0, 1, 0); verts[1] = new int3(0, 1, 1); verts[2] = new int3(1, 1, 1); verts[3] = new int3(1, 1, 0);
         verts[4] = new int3(0, 0, 1); verts[5] = new int3(1, 0, 1); verts[6] = new int3(1, 1, 1); verts[7] = new int3(0, 1, 1);
         verts[8] = new int3(1, 0, 1); verts[9] = new int3(1, 0, 0); verts[10] = new int3(1, 1, 0); verts[11] = new int3(1, 1, 1);
@@ -39,13 +41,13 @@ public class ChunkScheduler {
         verts[16] = new int3(0, 0, 0); verts[17] = new int3(0, 0, 1); verts[18] = new int3(0, 1, 1); verts[19] = new int3(0, 1, 0);
         verts[20] = new int3(0, 0, 0); verts[21] = new int3(1, 0, 0); verts[22] = new int3(1, 0, 1); verts[23] = new int3(0, 0, 1);
 
-        NativeArray<int3> dirs = new NativeArray<int3>(6, Allocator.Persistent);
-        verts[0] = new int3(0, 1, 0);
-        verts[1] = new int3(0, 0, 1);
-        verts[2] = new int3(1, 0, 0);
-        verts[3] = new int3(0, 0, -1);
-        verts[4] = new int3(-1, 0, 0);
-        verts[5] = new int3(0, -1, 0);
+        dirs = new NativeArray<int3>(6, Allocator.Persistent);
+        dirs[0] = new int3(0, 1, 0);
+        dirs[1] = new int3(0, 0, 1);
+        dirs[2] = new int3(1, 0, 0);
+        dirs[3] = new int3(0, 0, -1);
+        dirs[4] = new int3(-1, 0, 0);
+        dirs[5] = new int3(0, -1, 0);
 
         vertex_attributes = new NativeArray<VertexAttributeDescriptor>(3, Allocator.Persistent);
         vertex_attributes[0] = new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3);
@@ -59,6 +61,7 @@ public class ChunkScheduler {
 
         render_queue = new FastPriorityQueue<ChunkNode>(WorldSettings.RENDER_CONTAINER_SIZE);
         render_jobs = new NativeArray<int3>(render_batch_size, Allocator.Persistent);
+        render_accessor = default;
         render_output = default;
         render_handle = default;
     }
@@ -81,20 +84,19 @@ public class ChunkScheduler {
     public void LateUpdate() { ScheduleJobs(); }
 
     public void QueueChunksForGeneration(NativeList<int3> chunks) {
-        foreach (int3 chunk_pos in chunks) {
-            generate_queue.Enqueue(new ChunkNode(chunk_pos), Player.ChunkDistanceFromPlayer(chunk_pos));
+        foreach (int3 chunk_coord in chunks) {
+            generate_queue.Enqueue(new ChunkNode(chunk_coord), Player.ChunkDistanceFromPlayer(chunk_coord));
         }
     }
 
     public void QueueChunksForRendering(NativeList<int3> chunks) {
-        foreach (int3 chunk_pos in chunks) {
-            render_queue.Enqueue(new ChunkNode(chunk_pos), Player.ChunkDistanceFromPlayer(chunk_pos));
+        foreach (int3 chunk_coord in chunks) {
+            render_queue.Enqueue(new ChunkNode(chunk_coord), Player.ChunkDistanceFromPlayer(chunk_coord));
         }
     }
 
     public void Dispose() {
 
-        block_data.Dispose();
         verts.Dispose();
         dirs.Dispose();
         vertex_attributes.Dispose();
@@ -116,7 +118,9 @@ public class ChunkScheduler {
         generate_output.Clear();
 
         render_handle.Complete();
+        render_accessor.Dispose();
         chunk_manager.AddRenderedChunks(render_jobs, render_output);
+        render_output = default;
 
     }
 
@@ -138,7 +142,8 @@ public class ChunkScheduler {
                 render_jobs[idx] = render_queue.Dequeue().chunk_pos;
             }
 
-            render_output = Mesh.AllocateWritableMeshData(render_jobs.Length);;
+            render_output = Mesh.AllocateWritableMeshData(render_jobs.Length);
+
             ChunkAccessor accessor = chunk_manager.GetAccessor(render_jobs);
             RenderJob render_job = new RenderJob {
                 jobs = render_jobs,
@@ -150,9 +155,7 @@ public class ChunkScheduler {
                 output = render_output
             };
 
-            accessor.Dispose();
             render_handle = render_job.Schedule(render_jobs.Length, render_batch_size);
-            
         }
 
     }

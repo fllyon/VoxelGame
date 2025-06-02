@@ -33,7 +33,7 @@ public struct ChunkJob : IJobParallelFor {
                     int block_idx = new int3(x, y, z).Flatten();
                     if (global_y == 0) { chunk_data.blocks[block_idx] = 1; }
                     else if (global_y < surface_height) { chunk_data.blocks[block_idx] = 2; }
-                    else if (global_y < surface_height) { chunk_data.blocks[block_idx] = 3; }
+                    else if (global_y == surface_height) { chunk_data.blocks[block_idx] = 3; }
                     else { break; }
 
                 }
@@ -58,8 +58,8 @@ public struct RenderJob : IJobParallelFor {
 
     public void Execute(int idx) {
 
-        int3 chunk_pos = jobs[idx];
-        ChunkData chunk = accessor.chunk_data[chunk_pos];
+        int3 chunk_coord = jobs[idx];
+        int3 chunk_pos = chunk_coord * 32;
 
         int vertex_count = 0;
         NativeList<float3> vertices = new NativeList<float3>(Allocator.Temp);
@@ -73,21 +73,16 @@ public struct RenderJob : IJobParallelFor {
 
                     int3 block_pos = new int3(x, y, z);
                     int block_idx = block_pos.Flatten();
-                    int block_type = chunk.blocks[block_idx];
-                    if (block_type == 0) continue;
+                    int block_type = 0;
+                    if (accessor.chunk_data.ContainsKey(chunk_coord) &&
+                        accessor.chunk_data[chunk_coord].blocks[block_idx] == 0) { continue; }
 
                     for (int face = 0; face < 6; ++face) {
 
-                        int3 nbr_pos = new int3(x, y, z) + dirs[face];
-                        int3 nbr_acc = 3;
-                        if (nbr_pos.y >= 32) { nbr_acc = 0; }
-                        else if (nbr_pos.z >= 32) { nbr_acc = 1; }
-                        else if (nbr_pos.x >= 32) { nbr_acc = 2; }
-                        else if (nbr_pos.z < 0) { nbr_acc = 4; }
-                        else if (nbr_pos.x < 0) { nbr_acc = 5; }
-                        else if (nbr_pos.y < 0) { nbr_acc = 6; }
-                        int nbr_idx = Utility.GetLocalPos(nbr_pos).Flatten();
-                        int nbr_type = accessor.chunk_data[nbr_acc].blocks[nbr_idx];
+                        int3 nbr_global = chunk_pos + block_pos + dirs[face];
+                        int3 nbr_chunk = Utility.GetChunkCoord(nbr_global);
+                        int nbr_idx = Utility.GetLocalPos(nbr_global).Flatten();
+                        int nbr_type = accessor.chunk_data[nbr_chunk].blocks[nbr_idx];
                         if (nbr_type != 0) { continue; }
 
                         vertices.Add(block_pos + verts[face * 4]);

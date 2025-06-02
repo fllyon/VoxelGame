@@ -1,5 +1,6 @@
 using Priority_Queue;
 using System.Collections.Generic;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Jobs;
@@ -55,9 +56,9 @@ public class ChunkManager {
         NativeList<int3> chunks_to_generate = new NativeList<int3>(WorldSettings.LOAD_CONTAINER_SIZE, Allocator.Persistent);
 
         // For each chunk in range that's not yet generated, generate it
-        for (int x = player_chunk.x - load_distance; x < player_chunk.x + load_distance; ++x) {
-            for (int z = player_chunk.z - load_distance; z < player_chunk.z + load_distance; ++z) {
-                for (int y = player_chunk.y - load_distance; y < player_chunk.x + load_distance; ++y) {
+        for (int x = player_chunk.x - load_distance; x <= player_chunk.x + load_distance; ++x) {
+            for (int z = player_chunk.z - load_distance; z <= player_chunk.z + load_distance; ++z) {
+                for (int y = player_chunk.y - load_distance; y <= player_chunk.y + load_distance; ++y) {
 
                     int3 chunk_pos = new int3(x, y, z);
                     if (!chunk_data.ContainsKey(chunk_pos)) { chunks_to_generate.Add(chunk_pos); } 
@@ -70,11 +71,15 @@ public class ChunkManager {
         chunks_to_generate.Dispose();
     }
 
+    [BurstCompile]
     public ChunkAccessor GetAccessor(NativeArray<int3> chunk_coords) {
         return new ChunkAccessor(chunk_coords, ref chunk_data);
     }
 
+    [BurstCompile]
     public void AddGeneratedChunks(NativeParallelHashMap<int3, ChunkData> _chunk_data) {
+        if (_chunk_data.IsEmpty) { return; }
+
         NativeList<int3> chunks_to_render = new NativeList<int3>(_chunk_data.Count() * 2, Allocator.Persistent);
 
         foreach (var pair in _chunk_data) { 
@@ -90,18 +95,26 @@ public class ChunkManager {
     }
 
     public void AddRenderedChunks(NativeArray<int3> _jobs, Mesh.MeshDataArray _chunk_meshes) {
+        if (_chunk_meshes.Length == 0) { return; }
+
         Mesh[] meshes = new Mesh[_jobs.Length];
         for (int idx = 0; idx < _jobs.Length; ++idx) { 
-            GameObject chunk_object = new GameObject("World", typeof(MeshFilter), typeof(MeshRenderer));
-            chunk_object.transform.position = Vector3.zero;
+            GameObject chunk_object = new GameObject($"Chunk {_jobs[idx]}", typeof(MeshFilter), typeof(MeshRenderer));
+            chunk_object.transform.position = _jobs[idx].Vector3() * 32;
+            chunk_object.transform.parent = World.world_object;
+            chunk_object.GetComponent<MeshRenderer>().material = World.material;
 
             Chunk chunk_component = chunk_object.AddComponent<Chunk>();
             meshes[idx] = chunk_component.mesh_filter.mesh;
             chunk_components[_jobs[idx]] = chunk_component;
         }
+        
         Mesh.ApplyAndDisposeWritableMeshData(_chunk_meshes, meshes);
+        foreach (Mesh mesh in meshes) { mesh.RecalculateBounds(); }
+
     }
 
+    [BurstCompile]
     public void Dispose() {
         chunk_data.Dispose();
     }
@@ -110,6 +123,7 @@ public class ChunkManager {
     //                       Utility Functions                       //
     // ============================================================= //
 
+    [BurstCompile]
     private int GetNeighbors(int3 _chunk_coord) {
         int neighbors = 0;
 
@@ -123,6 +137,7 @@ public class ChunkManager {
         return neighbors;
     }
 
+    [BurstCompile]
     private bool ChunkInWorld(int3 coord) {
         return 0 <= coord.x && coord.x < WorldSettings.WORLD_SIZE_IN_CHUNKS &&
                0 <= coord.y && coord.y < WorldSettings.WORLD_HEIGHT_IN_CHUNKS &&
