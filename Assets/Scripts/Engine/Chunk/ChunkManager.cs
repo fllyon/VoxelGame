@@ -9,10 +9,10 @@ public class ChunkManager {
     public ChunkScheduler chunk_scheduler;
 
     private Dictionary<int3, Chunk> chunk_components;
-    private NativeParallelHashMap<int3, ChunkData> chunk_data;
+    private NativeParallelHashMap<int3, CompressedChunkData> chunk_data;
 
     public ChunkManager() {
-        chunk_data = new NativeParallelHashMap<int3, ChunkData>(WorldSettings.LOAD_CONTAINER_SIZE, Allocator.Persistent);
+        chunk_data = new NativeParallelHashMap<int3, CompressedChunkData>(WorldSettings.LOAD_CONTAINER_SIZE, Allocator.Persistent);
         chunk_components = new Dictionary<int3, Chunk>(WorldSettings.RENDER_CONTAINER_SIZE);
     }
 
@@ -101,7 +101,9 @@ public class ChunkManager {
         NativeList<int3> chunks_to_render = new NativeList<int3>(_chunk_data.Count() * 2, Allocator.Persistent);
 
         foreach (var pair in _chunk_data) { 
-            chunk_data.Add(pair.Key, pair.Value);
+            chunk_data.Add(pair.Key, new CompressedChunkData(pair.Value));
+            pair.Value.Dispose();
+
             foreach (int3 dir in Utility.self_dirs) { 
 
                 int3 nbr_coord = pair.Key + dir;

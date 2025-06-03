@@ -22,6 +22,14 @@ public class Player : MonoBehaviour {
         if (Input.GetKey(KeyCode.Space)) move.y = 1f * move_speed * Time.deltaTime;
         if (Input.GetKey(KeyCode.LeftShift)) move.y = -1f * move_speed * Time.deltaTime;
 
+        if (Input.GetKey(KeyCode.Escape)) {
+
+            var allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+            foreach (var obj in allObjects) { Destroy(obj); }
+            Application.Quit();
+            
+        }
+
         transform.Translate(move, Space.World);
         chunk_pos = Utility.GetChunkCoord(transform.position.Int3());
 

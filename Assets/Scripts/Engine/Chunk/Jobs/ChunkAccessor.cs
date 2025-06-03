@@ -8,7 +8,7 @@ public struct ChunkAccessor {
 
     public NativeHashMap<int3, ChunkData> chunk_data;
 
-    public ChunkAccessor(NativeArray<int3> chunk_coords, ref NativeParallelHashMap<int3, ChunkData> chunks) {
+    public ChunkAccessor(NativeArray<int3> chunk_coords, ref NativeParallelHashMap<int3, CompressedChunkData> chunks) {
 
         chunk_data = new NativeHashMap<int3, ChunkData>(chunk_coords.Length * 7, Allocator.Persistent);
         foreach (int3 chunk_coord in chunk_coords) {
@@ -17,7 +17,7 @@ public struct ChunkAccessor {
                 if (chunk_data.ContainsKey(coord)) { continue; }
                 if (!Utility.ChunkInWorld(coord)) { chunk_data[coord] = new ChunkData(coord); }
                 if (!chunks.ContainsKey(coord)) { continue; }
-                chunk_data[coord] = chunks[coord];
+                chunk_data[coord] = new ChunkData(chunks[coord]);
             }
         }
 
