@@ -19,6 +19,9 @@ public class Player : MonoBehaviour {
         float moveZ = Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0f, moveZ) * move_speed * Time.deltaTime;
 
+        if (Input.GetKey(KeyCode.Space)) move.y = 1f * move_speed * Time.deltaTime;
+        if (Input.GetKey(KeyCode.LeftShift)) move.y = -1f * move_speed * Time.deltaTime;
+
         transform.Translate(move, Space.World);
         chunk_pos = Utility.GetChunkCoord(transform.position.Int3());
 

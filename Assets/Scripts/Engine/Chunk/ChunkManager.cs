@@ -65,9 +65,9 @@ public class ChunkManager {
         NativeList<int3> chunks_to_generate = new NativeList<int3>(WorldSettings.LOAD_CONTAINER_SIZE, Allocator.Persistent);
         NativeList<int3> chunks_to_render = new NativeList<int3>(WorldSettings.RENDER_CONTAINER_SIZE, Allocator.Persistent);
         
-        for (int x = min_x; x < max_x; ++x) {
-            for (int y = min_y; y < max_y; ++y) {
-                for (int z = min_z; z < max_z; ++z) {
+        for (int x = min_x; x <= max_x; ++x) {
+            for (int y = min_y; y <= max_y; ++y) {
+                for (int z = min_z; z <= max_z; ++z) {
                     
                     int3 chunk_coord = new int3(x, y, z);
                     float distance = math.lengthsq(player_chunk - chunk_coord);
