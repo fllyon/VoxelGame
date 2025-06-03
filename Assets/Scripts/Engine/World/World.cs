@@ -42,12 +42,6 @@ public class World : MonoBehaviour {
         chunk_scheduler.LateUpdate();  
     }
 
-    void OnDestroy() {
-        chunk_manager.Dispose();
-        chunk_scheduler.Dispose();
-        block_data.Dispose();
-    }
-
     // ============================================================= //
     //                       Utility Functions                       //
     // ============================================================= //
@@ -55,6 +49,12 @@ public class World : MonoBehaviour {
     private void UpdatePlayerChunk(int3 chunk_coord) {
         player_chunk = chunk_coord;
         chunk_manager.UpdatePlayerChunk(chunk_coord);
+    }
+
+    public void Dispose() {
+        chunk_scheduler.Dispose();
+        chunk_manager.Dispose();
+        block_data.Dispose();
     }
 
 }

@@ -28,6 +28,7 @@ public class ChunkScheduler {
     private ChunkAccessor render_accessor;
     private Mesh.MeshDataArray render_output;
     private JobHandle render_handle = default;
+    bool render_output_allocated = false;
 
     public ChunkScheduler(Data.BlockData _block_data) {
 
@@ -63,6 +64,7 @@ public class ChunkScheduler {
         render_jobs = new NativeArray<int3>(render_batch_size, Allocator.Persistent);
         render_accessor = default;
         render_output = Mesh.AllocateWritableMeshData(0);
+        render_output_allocated = true;
         render_handle = default;
     }
 
@@ -114,12 +116,13 @@ public class ChunkScheduler {
         dirs.Dispose();
         vertex_attributes.Dispose();
 
-        if (generate_jobs.IsCreated) generate_jobs.Dispose();
+        if (generate_jobs.IsCreated) { generate_jobs.Dispose(); }
         foreach (var pair in generate_output) { pair.Value.Dispose(); }
         generate_output.Dispose();
 
-        if (render_jobs.IsCreated) render_jobs.Dispose();
-        render_accessor.Dispose();
+        if (render_jobs.IsCreated) { render_jobs.Dispose(); }
+        if (render_accessor.IsCreated) { render_accessor.Dispose(); }
+        if (render_output_allocated) { render_output.Dispose(); }
 
     }
 
@@ -135,10 +138,10 @@ public class ChunkScheduler {
         generate_output.Clear();
 
         render_handle.Complete();
-        render_accessor.Dispose();
-        chunk_manager.AddRenderedChunks(render_jobs, render_output);
-        if (render_jobs.IsCreated) render_jobs.Dispose();
-        render_output = default;
+        if (render_accessor.IsCreated) { render_accessor.Dispose(); }
+        if (render_jobs.IsCreated) { chunk_manager.AddRenderedChunks(render_jobs, render_output); }
+        render_output_allocated = false;
+        if (render_jobs.IsCreated) { render_jobs.Dispose(); }
 
     }
 
@@ -167,11 +170,12 @@ public class ChunkScheduler {
             }
 
             render_output = Mesh.AllocateWritableMeshData(render_jobs.Length);
+            render_output_allocated = true;
 
-            ChunkAccessor accessor = chunk_manager.GetAccessor(render_jobs);
+            render_accessor = chunk_manager.GetAccessor(render_jobs);
             RenderJob render_job = new RenderJob {
                 jobs = render_jobs,
-                accessor = accessor,
+                accessor = render_accessor,
                 verts = verts,
                 dirs = dirs,
                 vertex_attributes = vertex_attributes,

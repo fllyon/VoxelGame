@@ -12,6 +12,10 @@ public class GameManager : MonoBehaviour {
         SpawnWorld();
     }
 
+    void OnApplicationQuit() {
+        world.Dispose();
+    }
+
     // ============================================================= //
     //                       Utility Functions                       //
     // ============================================================= //

@@ -6,6 +6,7 @@ using UnityEngine;
 [BurstCompile]
 public struct ChunkAccessor {
 
+    public readonly bool IsCreated => chunk_data.IsCreated;
     public NativeHashMap<int3, ChunkData> chunk_data;
 
     public ChunkAccessor(NativeArray<int3> chunk_coords, ref NativeParallelHashMap<int3, CompressedChunkData> chunks) {
@@ -24,6 +25,7 @@ public struct ChunkAccessor {
     }
 
     public void Dispose() {
+        foreach (var pair in chunk_data) { pair.Value.Dispose(); }
         chunk_data.Dispose();
     }
 }

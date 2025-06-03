@@ -68,7 +68,6 @@ public struct UnsafeRunList {
         int curr = list[0];
 
         for (int idx = 1; idx < list.Length; ++idx) {
-
             if (list[idx] == curr) { 
                 run++;
             } else {
@@ -76,13 +75,9 @@ public struct UnsafeRunList {
                 curr = list[idx];
                 run = 1;
             }
-
-            
-
         }
 
         blocks.Add(new Run(curr, run));
-
     }
 
     public void Dispose() {
