@@ -47,6 +47,12 @@
             "name": "Sand",
             "faces": [7, 7, 7, 7, 7, 7],
             "isTransparent": false
+        },
+        {
+            "id": 8,
+            "name": "Log",
+            "faces": [10, 9, 9, 9, 9, 10],
+            "isTransparent": false
         }
     ]
 }

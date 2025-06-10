@@ -7,11 +7,11 @@ using UnityEngine;
 public struct ChunkAccessor {
 
     public readonly bool IsCreated => chunk_data.IsCreated;
-    public NativeHashMap<int3, ChunkData> chunk_data;
+    public NativeParallelHashMap<int3, ChunkData> chunk_data;
 
     public ChunkAccessor(NativeArray<int3> chunk_coords, ref NativeParallelHashMap<int3, CompressedChunkData> chunks) {
 
-        chunk_data = new NativeHashMap<int3, ChunkData>(chunk_coords.Length * 7, Allocator.Persistent);
+        chunk_data = new NativeParallelHashMap<int3, ChunkData>(chunk_coords.Length * 7, Allocator.Persistent);
         foreach (int3 chunk_coord in chunk_coords) {
             for (int idx = 0; idx < Utility.self_dirs.Length; ++idx) {
                 int3 coord = chunk_coord + Utility.self_dirs[idx];

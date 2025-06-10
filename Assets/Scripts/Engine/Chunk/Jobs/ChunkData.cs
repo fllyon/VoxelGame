@@ -8,11 +8,13 @@ using Unity.Mathematics;
 public struct ChunkData {
 
     public bool edited;
+    public bool decorated;
     public int3 position;
     public UnsafeList<int> blocks;
 
     public ChunkData(int3 _position) {
         edited = false;
+        decorated = false;
         position = _position;
         blocks = new UnsafeList<int>(32768, Allocator.Persistent, NativeArrayOptions.ClearMemory);
         blocks.Length = 32768;
@@ -20,6 +22,7 @@ public struct ChunkData {
 
     public ChunkData(CompressedChunkData compressed) {
         edited = compressed.edited;
+        decorated = compressed.decorated;
         position = compressed.position;
         blocks = new UnsafeList<int>(32768, Allocator.Persistent, NativeArrayOptions.ClearMemory);
         blocks.Length = 32768;
@@ -29,6 +32,18 @@ public struct ChunkData {
             for (int r = 0; r < run.length; ++r) {
                 blocks[idx++] = run.block_type;
             }
+        }
+    }
+
+    public ChunkData(ChunkData chunk_data) {
+        edited = chunk_data.edited;
+        decorated = chunk_data.decorated;
+        position = chunk_data.position;
+        blocks = new UnsafeList<int>(32768, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+        blocks.Length = 32768;
+
+        for (int idx = 0; idx < blocks.Length; ++idx) {
+            blocks[idx] = chunk_data.blocks[idx];
         }
     }
 
@@ -42,11 +57,13 @@ public struct ChunkData {
 public struct CompressedChunkData {
 
     public bool edited;
+    public bool decorated;
     public int3 position;
     public UnsafeRunList block_data;
 
     public CompressedChunkData(ChunkData chunk_data) {
         edited = chunk_data.edited;
+        decorated = chunk_data.decorated;
         position = chunk_data.position;
         block_data = new UnsafeRunList(chunk_data.blocks);
     }

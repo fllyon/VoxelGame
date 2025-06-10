@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using Unity.Burst;
 using Unity.Mathematics;
 
 public static class WorldGen {
 
+    [BurstCompile]
     public static float GetNoise(float x, float z, float variance, int offset, float scale, int octaves) {
 
         float output = 0;
@@ -19,6 +21,13 @@ public static class WorldGen {
         return output;
     }
 
+    [BurstCompile]
+    public static float GetCellNoise(float x, float z, int offset, float scale) {
+        x += (offset + 0.01f) * scale;
+        z += (offset + 0.01f) * scale;
+        return math.length(noise.cellular(new float2(x, z)));
+    }
+
     // ============================================================= //
     //                            Forest                             //
     // ============================================================= //
@@ -31,6 +40,18 @@ public static class WorldGen {
     
     public static int GetSurfaceHeight(int x, int z) {
         return surface_base + (int)GetNoise(x, z, surface_variance, surface_offset, surface_scale, surface_octaves);
+    }
+
+    // ============================================================= //
+    //                             Tree                              //
+    // ============================================================= //
+
+    const int tree_offset = 1047;
+    const float tree_scale = 1.5f;
+    const float tree_threshold = 0.7f;
+
+    public static bool SpawnTreeHere(int x, int z) {
+        return tree_threshold < GetNoise(x, z, 1, tree_offset, tree_scale, 1);
     }
     
 }

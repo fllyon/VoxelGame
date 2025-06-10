@@ -21,6 +21,13 @@ public class ChunkScheduler {
     private NativeArray<int3> generate_jobs;
     private NativeParallelHashMap<int3, ChunkData> generate_output;
     private JobHandle generate_handle = default;
+
+    private int decorate_batch_size = 4;
+    private FastPriorityQueue<ChunkNode> decorate_queue;
+    private NativeArray<int3> decorate_jobs;
+    private ChunkAccessor decorate_accessor;
+    private NativeParallelHashMap<int3, ChunkData> decorate_output;
+    private JobHandle decorate_handle = default;
     
     private int render_batch_size = 4;
     private FastPriorityQueue<ChunkNode> render_queue;
@@ -60,6 +67,12 @@ public class ChunkScheduler {
         generate_output = new NativeParallelHashMap<int3, ChunkData>(WorldSettings.LOAD_CONTAINER_SIZE, Allocator.Persistent);
         generate_handle = default;
 
+        decorate_queue = new FastPriorityQueue<ChunkNode>(WorldSettings.LOAD_CONTAINER_SIZE);
+        decorate_jobs = new NativeArray<int3>(generate_batch_size, Allocator.Persistent);
+        decorate_accessor = default;
+        decorate_output = new NativeParallelHashMap<int3, ChunkData>(WorldSettings.LOAD_CONTAINER_SIZE, Allocator.Persistent);
+        decorate_handle = default;
+
         render_queue = new FastPriorityQueue<ChunkNode>(WorldSettings.RENDER_CONTAINER_SIZE);
         render_jobs = new NativeArray<int3>(render_batch_size, Allocator.Persistent);
         render_accessor = default;
@@ -83,7 +96,9 @@ public class ChunkScheduler {
 
     public void Update() { CompleteJobs(); }
 
-    public void LateUpdate() { ScheduleJobs(); }
+    public void LateUpdate() { 
+        ScheduleJobs();
+    }
 
     public void ReplaceGenerateQueue(NativeList<int3> chunks) {
         generate_queue.Clear();
@@ -93,6 +108,17 @@ public class ChunkScheduler {
     public void QueueChunksForGeneration(NativeList<int3> chunks) {
         foreach (int3 chunk_coord in chunks) {
             generate_queue.Enqueue(new ChunkNode(chunk_coord), Player.ChunkDistanceFromPlayer(chunk_coord));
+        }
+    }
+
+    public void ReplaceDecorateQueue(NativeList<int3> chunks) {
+        decorate_queue.Clear();
+        QueueChunksForDecoration(chunks);
+    }
+
+    public void QueueChunksForDecoration(NativeList<int3> chunks) {
+        foreach (int3 chunk_coord in chunks) {
+            decorate_queue.Enqueue(new ChunkNode(chunk_coord), Player.ChunkDistanceFromPlayer(chunk_coord));
         }
     }
 
@@ -110,6 +136,7 @@ public class ChunkScheduler {
     public void Dispose() {
 
         generate_handle.Complete();
+        decorate_handle.Complete();
         render_handle.Complete();
 
         verts.Dispose();
@@ -119,6 +146,10 @@ public class ChunkScheduler {
         if (generate_jobs.IsCreated) { generate_jobs.Dispose(); }
         foreach (var pair in generate_output) { pair.Value.Dispose(); }
         generate_output.Dispose();
+
+        if (decorate_jobs.IsCreated) { decorate_jobs.Dispose(); }
+        if (decorate_accessor.IsCreated) { decorate_accessor.Dispose(); }
+        decorate_output.Dispose();
 
         if (render_jobs.IsCreated) { render_jobs.Dispose(); }
         if (render_accessor.IsCreated) { render_accessor.Dispose(); }
@@ -134,8 +165,14 @@ public class ChunkScheduler {
 
         generate_handle.Complete();
         chunk_manager.AddGeneratedChunks(generate_output);
-        if (generate_jobs.IsCreated) generate_jobs.Dispose();
+        if (generate_jobs.IsCreated) { generate_jobs.Dispose(); }
         generate_output.Clear();
+
+        decorate_handle.Complete();
+        chunk_manager.AddDecoratedChunks(decorate_output);
+        if (decorate_accessor.IsCreated) { decorate_accessor.Dispose(); }
+        if (decorate_jobs.IsCreated) { decorate_jobs.Dispose(); }
+        decorate_output.Clear();
 
         render_handle.Complete();
         if (render_accessor.IsCreated) { render_accessor.Dispose(); }
@@ -147,6 +184,7 @@ public class ChunkScheduler {
 
     private void ScheduleJobs() {
 
+        // Schedule Generation Jobs
         if (generate_queue.Count != 0) {
 
             int generate_job_count = math.min(generate_queue.Count, generate_batch_size);
@@ -154,13 +192,34 @@ public class ChunkScheduler {
             for (int idx = 0; idx < generate_job_count; ++idx) {
                 generate_jobs[idx] = generate_queue.Dequeue().chunk_pos;
             }
-            ChunkJob generate_job = new ChunkJob {
+            GenerateJob generate_job = new GenerateJob {
                 jobs = generate_jobs,
                 output = generate_output.AsParallelWriter()
             };
             generate_handle = generate_job.Schedule(generate_jobs.Length, generate_batch_size);
         }
 
+        // Schedule Decoration Jobs
+        if (decorate_queue.Count != 0) {
+
+            int decorate_job_count = math.min(decorate_queue.Count, decorate_batch_size);
+            decorate_jobs = new NativeArray<int3>(decorate_job_count, Allocator.Persistent);
+            for (int idx = 0; idx < decorate_job_count; ++idx) {
+                decorate_jobs[idx] = decorate_queue.Dequeue().chunk_pos;
+            }
+
+            decorate_accessor = chunk_manager.GetAccessor(decorate_jobs);
+
+            DecorateJob decorate_job = new DecorateJob {
+                jobs = decorate_jobs,
+                accessor = decorate_accessor,
+                output = decorate_output.AsParallelWriter()
+            };
+
+            decorate_handle = decorate_job.Schedule(decorate_jobs.Length, decorate_batch_size);
+        }
+
+        // Schedule Render Jobs
         if (render_queue.Count != 0) {
 
             int render_job_count = math.min(render_queue.Count, generate_batch_size);

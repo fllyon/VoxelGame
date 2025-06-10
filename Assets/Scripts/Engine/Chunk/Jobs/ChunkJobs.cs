@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 [BurstCompile]
-public struct ChunkJob : IJobParallelFor {
+public struct GenerateJob : IJobParallelFor {
 
     [ReadOnly] public NativeArray<int3> jobs;
     public NativeParallelHashMap<int3, ChunkData>.ParallelWriter output;
@@ -41,6 +41,44 @@ public struct ChunkJob : IJobParallelFor {
         }
 
         output.TryAdd(chunk_coord, chunk_data); 
+    }
+
+}
+
+[BurstCompile]
+public struct DecorateJob : IJobParallelFor {
+
+    [ReadOnly] public NativeArray<int3> jobs;
+    [ReadOnly] public ChunkAccessor accessor;
+    public NativeParallelHashMap<int3, ChunkData>.ParallelWriter output;
+
+    public void Execute(int idx) {
+
+        int3 chunk_coord = jobs[idx];
+        int3 chunk_pos = chunk_coord * 32;
+        ChunkData chunk = new ChunkData(accessor.chunk_data[chunk_coord]);
+
+        for (int x = 0; x < 32; ++x) {
+            int global_x = chunk_pos.x + x;
+
+            for (int z = 0; z < 32; ++z) {
+                int global_z = chunk_pos.z + z;
+
+                if (!WorldGen.SpawnTreeHere(global_x, global_z)) { continue; }
+                int surface_height = WorldGen.GetSurfaceHeight(global_x, global_z) - chunk_pos.y;
+                if (32 <= surface_height || surface_height < -4) { continue; }
+
+                int start = math.max(0, surface_height);
+                int end = math.min(31, surface_height + 5);
+
+                int block_idx = new int3(x, 0, z).Flatten();
+                for (int y = start; y < end; ++y) { chunk.blocks[block_idx + y] = 8; }
+            }
+        }
+
+        chunk.decorated = true;
+        output.TryAdd(chunk_coord, chunk);
+
     }
 
 }

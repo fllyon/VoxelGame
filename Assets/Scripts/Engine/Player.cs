@@ -4,38 +4,64 @@ using UnityEngine.Diagnostics;
 
 public class Player : MonoBehaviour {
 
-    private static float move_speed = 5f;
+    public static int3 position;
     public static int3 chunk_pos;
 
+    private float pitch = 0f;
+
+    [Header("Movement Settings")]
+    private float move_speed = 10f;
+    private float mouse_sensitivity = 8f;
+    [SerializeField] private Transform camera_transform;
+    
+
     void Awake() {
-        int middle = (WorldSettings.WORLD_SIZE_IN_CHUNKS >> 1) * 32 + 16;
-        int height = WorldGen.GetSurfaceHeight(middle, middle);
-        transform.position = new Vector3(middle, height, middle) + new Vector3(0.5f, 1f, 0.5f);
-        chunk_pos = Utility.GetChunkCoord(new int3(middle, height, middle));
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
+        SpawnPlayer();
     }
 
     void Update() {
-        float moveX = Input.GetAxis("Horizontal");
-        float moveZ = Input.GetAxis("Vertical");
-        Vector3 move = new Vector3(moveX, 0f, moveZ) * move_speed * Time.deltaTime;
-
-        if (Input.GetKey(KeyCode.Space)) move.y = 1f * move_speed * Time.deltaTime;
-        if (Input.GetKey(KeyCode.LeftShift)) move.y = -1f * move_speed * Time.deltaTime;
-
-        if (Input.GetKey(KeyCode.Escape)) {
-
-            var allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
-            foreach (var obj in allObjects) { Destroy(obj); }
-            Application.Quit();
-            
-        }
-
-        transform.Translate(move, Space.World);
-        chunk_pos = Utility.GetChunkCoord(transform.position.Int3());
-
+        if (Input.GetKey(KeyCode.Escape)) { GameManager.QuitGame(); }
+        MovePlayer();
     }
 
     public static float ChunkDistanceFromPlayer(int3 chunk_coord) {
         return math.length(chunk_coord - chunk_pos);
+    }
+
+    private void SpawnPlayer() {
+        int middle = (WorldSettings.WORLD_SIZE_IN_CHUNKS >> 1) * 32 + 16;
+        int height = WorldGen.GetSurfaceHeight(middle, middle);
+        transform.position = new Vector3(middle, height, middle) + new Vector3(0.5f, 1f, 0.5f);
+        chunk_pos = Utility.GetChunkCoord(new int3(middle, height, middle));
+        SetPosition();
+    }
+
+    private void SetPosition() {
+        position = transform.position.Int3();
+        chunk_pos = Utility.GetChunkCoord(position);
+    }
+
+    private void MovePlayer() {
+
+        // Move player
+        float vertical = Input.GetAxis("Vertical");
+        float horizontal = Input.GetAxis("Horizontal");
+        if (vertical != 0 || horizontal != 0) {
+            Vector3 movement = (transform.forward * vertical + transform.right * horizontal) * move_speed * Time.deltaTime;
+            transform.Translate(movement, Space.World);
+        }
+
+        // Rotate Camera
+        horizontal = Input.GetAxis("Mouse X");
+        if (horizontal != 0) { transform.Rotate(Vector3.up * horizontal * mouse_sensitivity); }
+
+        vertical = Input.GetAxis("Mouse Y");
+        if (vertical != 0) {
+            pitch = Mathf.Clamp(pitch - (vertical * mouse_sensitivity), -89.9f, 89.9f);
+            camera_transform.localRotation = Quaternion.Euler(pitch, 0, 0);
+        }
     }
 }

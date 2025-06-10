@@ -98,7 +98,7 @@ public class ChunkManager {
     public void AddGeneratedChunks(NativeParallelHashMap<int3, ChunkData> _chunk_data) {
         if (_chunk_data.IsEmpty) { return; }
 
-        NativeList<int3> chunks_to_render = new NativeList<int3>(_chunk_data.Count() * 2, Allocator.Persistent);
+        NativeList<int3> chunks_to_decorate = new NativeList<int3>(_chunk_data.Count() * 2, Allocator.Persistent);
 
         foreach (var pair in _chunk_data) { 
             chunk_data.Add(pair.Key, new CompressedChunkData(pair.Value));
@@ -108,6 +108,31 @@ public class ChunkManager {
 
                 int3 nbr_coord = pair.Key + dir;
                 if (GetNeighbors(nbr_coord) == 6 && ChunkInWorld(nbr_coord) &&
+                    Player.ChunkDistanceFromPlayer(nbr_coord) < WorldSettings.RENDER_DISTANCE) { 
+                        chunks_to_decorate.Add(nbr_coord);
+                }    
+            }
+        }
+
+        chunk_scheduler.QueueChunksForDecoration(chunks_to_decorate);
+        chunks_to_decorate.Dispose();
+    }
+
+    [BurstCompile]
+    public void AddDecoratedChunks(NativeParallelHashMap<int3, ChunkData> _chunk_data) {
+        if (_chunk_data.IsEmpty) { return; }
+
+        NativeList<int3> chunks_to_render = new NativeList<int3>(_chunk_data.Count() * 2, Allocator.Persistent);
+
+        foreach (var pair in _chunk_data) {
+            chunk_data[pair.Key].Dispose();
+            chunk_data[pair.Key] = new CompressedChunkData(pair.Value);
+            pair.Value.Dispose();
+
+            foreach (int3 dir in Utility.surface_dirs) { 
+
+                int3 nbr_coord = pair.Key + dir;
+                if (GetDecoratedNeighbors(nbr_coord) == 6 && ChunkInWorld(nbr_coord) &&
                     Player.ChunkDistanceFromPlayer(nbr_coord) < WorldSettings.RENDER_DISTANCE) { 
                         chunks_to_render.Add(nbr_coord);
                 }    
@@ -155,6 +180,20 @@ public class ChunkManager {
         foreach (int3 dir in Utility.dirs) {
             int3 nbr = _chunk_coord + dir;
             if (chunk_data.ContainsKey(nbr) || !ChunkInWorld(nbr)) {
+                ++neighbors;
+            }
+        }
+
+        return neighbors;
+    }
+
+    [BurstCompile]
+    private int GetDecoratedNeighbors(int3 _chunk_coord) {
+        int neighbors = 0;
+
+        foreach (int3 dir in Utility.dirs) {
+            int3 nbr = _chunk_coord + dir;
+            if ((chunk_data.ContainsKey(nbr) && chunk_data[nbr].decorated) || !ChunkInWorld(nbr)) {
                 ++neighbors;
             }
         }

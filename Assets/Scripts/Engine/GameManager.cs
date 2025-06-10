@@ -25,5 +25,11 @@ public class GameManager : MonoBehaviour {
         world_object.transform.position = Vector3.zero;
         world = world_object.AddComponent<World>();
     }
+
+    public static void QuitGame() {
+        var allObjects = FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+        foreach (var obj in allObjects) { Destroy(obj); }
+        Application.Quit();
+    }
     
 }
