@@ -66,10 +66,10 @@ public struct DecorateJob : IJobParallelFor {
 
                 if (!WorldGen.SpawnTreeHere(global_x, global_z)) { continue; }
                 int surface_height = WorldGen.GetSurfaceHeight(global_x, global_z) - chunk_pos.y;
-                if (32 <= surface_height || surface_height < -4) { continue; }
+                if (32 <= surface_height || surface_height < 1 - WorldGen.tree_height) { continue; }
 
-                int start = math.max(0, surface_height);
-                int end = math.min(31, surface_height + 5);
+                int start = math.max(0, surface_height + 1);
+                int end = math.min(32, surface_height + 1 + WorldGen.tree_height);
 
                 int block_idx = new int3(x, 0, z).Flatten();
                 for (int y = start; y < end; ++y) { chunk.blocks[block_idx + y] = 8; }

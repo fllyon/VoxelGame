@@ -63,6 +63,7 @@ public class ChunkManager {
         chunks_to_remove.Dispose();
 
         NativeList<int3> chunks_to_generate = new NativeList<int3>(WorldSettings.LOAD_CONTAINER_SIZE, Allocator.Persistent);
+        NativeList<int3> chunks_to_decorate = new NativeList<int3>(WorldSettings.LOAD_CONTAINER_SIZE, Allocator.Persistent);
         NativeList<int3> chunks_to_render = new NativeList<int3>(WorldSettings.RENDER_CONTAINER_SIZE, Allocator.Persistent);
         
         for (int x = min_x; x <= max_x; ++x) {
@@ -71,10 +72,13 @@ public class ChunkManager {
                     
                     int3 chunk_coord = new int3(x, y, z);
                     float distance = math.lengthsq(player_chunk - chunk_coord);
-                    if (distance < load_distance && !chunk_data.ContainsKey(chunk_coord)) { 
+                    if (distance >= load_distance) { continue; }
+
+                    if (!chunk_data.ContainsKey(chunk_coord)) { 
                         chunks_to_generate.Add(chunk_coord);
-                    } else if (distance < render_distance && !chunk_components.ContainsKey(chunk_coord) &&
-                               GetNeighbors(chunk_coord) == 6) {
+                    } else if (!chunk_data[chunk_coord].decorated && GetDecoratedNeighbors(chunk_coord) == 6) {
+                        chunks_to_decorate.Add(chunk_coord);
+                    } else if (distance < render_distance && GetNeighbors(chunk_coord) == 6) {
                         chunks_to_render.Add(chunk_coord);
                     }
                     
@@ -84,6 +88,9 @@ public class ChunkManager {
 
         chunk_scheduler.ReplaceGenerateQueue(chunks_to_generate);
         chunks_to_generate.Dispose();
+
+        chunk_scheduler.ReplaceDecorateQueue(chunks_to_decorate);
+        chunks_to_decorate.Dispose();
 
         chunk_scheduler.ReplaceRenderQueue(chunks_to_render);
         chunks_to_render.Dispose();
@@ -101,6 +108,7 @@ public class ChunkManager {
         NativeList<int3> chunks_to_decorate = new NativeList<int3>(_chunk_data.Count() * 2, Allocator.Persistent);
 
         foreach (var pair in _chunk_data) { 
+
             chunk_data.Add(pair.Key, new CompressedChunkData(pair.Value));
             pair.Value.Dispose();
 
@@ -110,7 +118,7 @@ public class ChunkManager {
                 if (GetNeighbors(nbr_coord) == 6 && ChunkInWorld(nbr_coord) &&
                     Player.ChunkDistanceFromPlayer(nbr_coord) < WorldSettings.RENDER_DISTANCE) { 
                         chunks_to_decorate.Add(nbr_coord);
-                }    
+                }
             }
         }
 
@@ -129,11 +137,13 @@ public class ChunkManager {
             chunk_data[pair.Key] = new CompressedChunkData(pair.Value);
             pair.Value.Dispose();
 
-            foreach (int3 dir in Utility.surface_dirs) { 
+            foreach (int3 dir in Utility.all_dirs) { 
 
                 int3 nbr_coord = pair.Key + dir;
-                if (GetDecoratedNeighbors(nbr_coord) == 6 && ChunkInWorld(nbr_coord) &&
+                Debug.Log(GetDecoratedNeighbors(nbr_coord));
+                if (GetDecoratedNeighbors(nbr_coord) == 27 && ChunkInWorld(nbr_coord) &&
                     Player.ChunkDistanceFromPlayer(nbr_coord) < WorldSettings.RENDER_DISTANCE) { 
+                        if (math.all(nbr_coord == new int3(64, 13, 64))) { Debug.Log("Passed Eval"); }
                         chunks_to_render.Add(nbr_coord);
                 }    
             }
@@ -191,7 +201,7 @@ public class ChunkManager {
     private int GetDecoratedNeighbors(int3 _chunk_coord) {
         int neighbors = 0;
 
-        foreach (int3 dir in Utility.dirs) {
+        foreach (int3 dir in Utility.all_dirs) {
             int3 nbr = _chunk_coord + dir;
             if ((chunk_data.ContainsKey(nbr) && chunk_data[nbr].decorated) || !ChunkInWorld(nbr)) {
                 ++neighbors;

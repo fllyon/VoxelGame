@@ -87,7 +87,17 @@ static class Utility {
         new int3(0, -1, 0)
     };
 
-    public static int3[] surface_dirs = {
+    public static int3[] all_dirs = {
+        new int3(1, 1, 1),
+        new int3(0, 1, 1),
+        new int3(-1, 1, 1),
+        new int3(1, 1, 0),
+        new int3(0, 1, 0),
+        new int3(-1, 1, 0),
+        new int3(1, 1, -1),
+        new int3(0, 1, -1),
+        new int3(-1, 1, -1),
+
         new int3(1, 0, 1),
         new int3(0, 0, 1),
         new int3(-1, 0, 1),
@@ -97,6 +107,16 @@ static class Utility {
         new int3(1, 0, -1),
         new int3(0, 0, -1),
         new int3(-1, 0, -1),
+
+        new int3(1, -1, 1),
+        new int3(0, -1, 1),
+        new int3(-1, -1, 1),
+        new int3(1, -1, 0),
+        new int3(0, -1, 0),
+        new int3(-1, -1, 0),
+        new int3(1, -1, -1),
+        new int3(0, -1, -1),
+        new int3(-1, -1, -1),
     };
 
 }

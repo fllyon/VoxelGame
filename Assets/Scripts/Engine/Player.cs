@@ -35,7 +35,6 @@ public class Player : MonoBehaviour {
         int middle = (WorldSettings.WORLD_SIZE_IN_CHUNKS >> 1) * 32 + 16;
         int height = WorldGen.GetSurfaceHeight(middle, middle);
         transform.position = new Vector3(middle, height, middle) + new Vector3(0.5f, 1f, 0.5f);
-        chunk_pos = Utility.GetChunkCoord(new int3(middle, height, middle));
         SetPosition();
     }
 

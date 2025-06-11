@@ -46,8 +46,10 @@ public static class WorldGen {
     //                             Tree                              //
     // ============================================================= //
 
+    public const int tree_height = 10;
+
     const int tree_offset = 1047;
-    const float tree_scale = 1.5f;
+    const float tree_scale = 0.35f;
     const float tree_threshold = 0.7f;
 
     public static bool SpawnTreeHere(int x, int z) {
